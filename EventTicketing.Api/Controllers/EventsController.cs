@@ -38,4 +38,12 @@ public class EventsController : ControllerBase
     {
         return Ok(_events);
     }
+
+    [HttpGet("{id}")]
+    public ActionResult<Event> GetById(int id)
+    {
+        var ev = _events.FirstOrDefault(e => e.Id == id);
+        if (ev is null) return NotFound();
+        return Ok(ev);
+    }
 }

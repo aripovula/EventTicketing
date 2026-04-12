@@ -25,4 +25,22 @@ public class EventsControllerTests
         var events = Assert.IsAssignableFrom<IEnumerable<Event>>(ok.Value);
         Assert.NotEmpty(events);
     }
+
+    [Fact]
+    public void GetById_ExistingId_ReturnsEvent()
+    {
+        var result = _controller.GetById(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var ev = Assert.IsType<Event>(ok.Value);
+        Assert.Equal(1, ev.Id);
+    }
+
+    [Fact]
+    public void GetById_NonExistingId_ReturnsNotFound()
+    {
+        var result = _controller.GetById(999);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
 }
