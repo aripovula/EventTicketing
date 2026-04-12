@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTicketing.Api", "EventTicketing.Api\EventTicketing.Api.csproj", "{AA2E3273-B208-4ED2-8BF1-5D550FC045B8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTicketing.Tests", "EventTicketing.Tests\EventTicketing.Tests.csproj", "{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{AA2E3273-B208-4ED2-8BF1-5D550FC045B8}.Release|x64.Build.0 = Release|Any CPU
 		{AA2E3273-B208-4ED2-8BF1-5D550FC045B8}.Release|x86.ActiveCfg = Release|Any CPU
 		{AA2E3273-B208-4ED2-8BF1-5D550FC045B8}.Release|x86.Build.0 = Release|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Debug|x64.Build.0 = Debug|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Debug|x86.Build.0 = Debug|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Release|x64.ActiveCfg = Release|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Release|x64.Build.0 = Release|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Release|x86.ActiveCfg = Release|Any CPU
+		{039B8995-B1C4-496B-9EC6-9D8B6D72A89C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
