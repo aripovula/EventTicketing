@@ -1,0 +1,37 @@
+name: E2E Tests
+
+on: [push, pull_request]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright browsers
+        run: |
+          dotnet build EventTicketing.E2ETests
+          pwsh EventTicketing.E2ETests/bin/Debug/net9.0/playwright.ps1 install chromium
+
+      - name: Start .NET API
+        run: dotnet run --project EventTicketing.Api &
+
+      - name: Install frontend deps and start Vite
+        run: |
+          cd event-ticketing-ui
+          npm ci
+          npm run dev &
+
+      - name: Wait for servers
+        run: npx wait-on http://localhost:5017/api/events http://localhost:5173
+
+      - name: Run E2E tests
+        run: dotnet test EventTicketing.E2ETests
