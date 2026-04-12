@@ -1,0 +1,104 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: event-ticketing-ui
+
+      - name: Frontend lint
+        run: npm run lint
+        working-directory: event-ticketing-ui
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Backend format check
+        run: dotnet format --verify-no-changes EventTicketing.sln
+
+  unit-tests:
+    name: Unit Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Backend unit tests
+        run: dotnet test EventTicketing.Tests
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: event-ticketing-ui
+
+      - name: Frontend unit tests
+        run: npm test
+        working-directory: event-ticketing-ui
+
+  e2e:
+    name: E2E Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build .NET projects
+        run: dotnet build
+
+      - name: Install Playwright browsers
+        run: pwsh EventTicketing.E2ETests/bin/Debug/net9.0/playwright.ps1 install chromium
+
+      - name: Start .NET API
+        run: nohup dotnet run --project EventTicketing.Api --no-build > api.log 2>&1 &
+        env:
+          ASPNETCORE_URLS: http://localhost:5017
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: event-ticketing-ui
+
+      - name: Start Vite dev server
+        run: nohup npm run dev > vite.log 2>&1 &
+        working-directory: event-ticketing-ui
+
+      - name: Print server startup logs
+        run: sleep 5 && echo "=== API log ===" && cat api.log || true && echo "=== Vite log ===" && cat event-ticketing-ui/vite.log || true
+
+      - name: Wait for servers
+        run: npx wait-on --timeout 60000 tcp:localhost:5017 tcp:localhost:5173
+
+      - name: Run E2E tests
+        run: dotnet test EventTicketing.E2ETests
+
+      - name: Print server logs on failure
+        if: failure()
+        run: |
+          echo "=== API log ===" && cat api.log || true
+          echo "=== Vite log ===" && cat event-ticketing-ui/vite.log || true
