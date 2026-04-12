@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import EventList from './EventList'
 
 const mockEvents = [
@@ -25,12 +26,12 @@ afterEach(() => {
 })
 
 test('shows loading state initially', () => {
-  render(<EventList />)
+  render(<MemoryRouter><EventList /></MemoryRouter>)
   expect(screen.getByText('Loading events...')).toBeInTheDocument()
 })
 
 test('renders events after fetch', async () => {
-  render(<EventList />)
+  render(<MemoryRouter><EventList /></MemoryRouter>)
   await waitFor(() => expect(screen.getByText('Jazz Night')).toBeInTheDocument())
   expect(screen.getByText(/Blue Note Club/)).toBeInTheDocument()
   expect(screen.getByText(/25/)).toBeInTheDocument()

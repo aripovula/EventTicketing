@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 type Event = {
   id: number
@@ -30,7 +31,7 @@ export default function EventList() {
     <ul aria-label="events">
       {events.map(event => (
         <li key={event.id}>
-          <h2>{event.title}</h2>
+          <h2><Link to={`/events/${event.id}`}>{event.title}</Link></h2>
           <p>{event.venue} — {new Date(event.date).toLocaleDateString()}</p>
           <p>${event.price} · {event.availableSeats} seats available</p>
         </li>
