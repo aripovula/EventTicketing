@@ -14,7 +14,7 @@ public class EventsController : ControllerBase
             Id = 1,
             Title = "Jazz Night",
             Description = "An evening of live jazz music.",
-            Date = new DateTime(2026, 6, 15, 20, 0, 0),
+            Date = new DateTime(2026, 8, 15, 20, 0, 0),
             Venue = "Blue Note Club",
             TotalSeats = 100,
             AvailableSeats = 100,

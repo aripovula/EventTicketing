@@ -8,7 +8,7 @@ const mockEvents = [
     id: 1,
     title: 'Jazz Night',
     description: 'An evening of live jazz music.',
-    date: '2026-06-15T20:00:00',
+    date: '2026-08-15T20:00:00',
     venue: 'Blue Note Club',
     totalSeats: 100,
     availableSeats: 100,
@@ -46,7 +46,6 @@ test('shows filter by text input field', () => {
   expect(screen.findByPlaceholderText('type search term'))
 })
 
-
 test('renders events after fetch', async () => {
   render(<MemoryRouter><EventList /></MemoryRouter>)
   await waitFor(() => expect(screen.getByText('Jazz Night')).toBeInTheDocument())
@@ -81,8 +80,46 @@ test('shows no events when search term matches nothing', async () => {
   render(<MemoryRouter><EventList /></MemoryRouter>)
   await waitFor(() => screen.getByText('Jazz Night'))
 
-  await user.type(screen.getByPlaceholderText('type search term'), 'zzz')
+  await user.type(screen.getByPlaceholderText('type search term'), 'zzznomatch')
 
   expect(screen.queryAllByRole('listitem')).toHaveLength(0)
 })
 
+test('shows sort type dropdown view', async () => {
+  render(<MemoryRouter><EventList /></MemoryRouter>)
+  const user = userEvent.setup();
+
+  const sortSelect = await screen.findByDisplayValue(/sort by name/i);
+  expect(sortSelect).toBeInTheDocument();
+
+  await user.click(sortSelect);
+
+  const sortByDateOption = await screen.findByRole('option', {
+    name: /sort by date/i,
+  });
+  expect(sortByDateOption).toBeInTheDocument();
+});
+
+test('sorts events by price ascending', async () => {
+  const user = userEvent.setup()
+  render(<MemoryRouter><EventList /></MemoryRouter>)
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.selectOptions(screen.getByRole('combobox'), 'price')
+
+  const items = screen.getAllByRole('listitem')
+  expect(items[0]).toHaveTextContent('Jazz Night')    // $25
+  expect(items[1]).toHaveTextContent('Tech Conference') // $149
+})
+
+test('sorts events by date ascending', async () => {
+  const user = userEvent.setup()
+  render(<MemoryRouter><EventList /></MemoryRouter>)
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.selectOptions(screen.getByRole('combobox'), 'date')
+
+  const items = screen.getAllByRole('listitem')
+  expect(items[0]).toHaveTextContent('Tech Conference') // July
+  expect(items[1]).toHaveTextContent('Jazz Night')      // August
+})
