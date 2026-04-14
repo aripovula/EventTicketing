@@ -123,3 +123,65 @@ test('sorts events by date ascending', async () => {
   expect(items[0]).toHaveTextContent('Tech Conference') // July
   expect(items[1]).toHaveTextContent('Jazz Night')      // August
 })
+
+describe('polling', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test('polls API again after 30 seconds', async () => {
+    render(<MemoryRouter><EventList /></MemoryRouter>)
+    await vi.advanceTimersByTimeAsync(10) // flush initial fetch promises
+
+    const callsAfterMount = vi.mocked(fetch).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsAfterMount)
+  })
+
+  test('updates displayed events when polling returns new data', async () => {
+    const updatedEvents = [
+      ...mockEvents,
+      {
+        id: 3,
+        title: 'New Event',
+        description: 'Just added.',
+        date: '2026-09-01T10:00:00',
+        venue: 'New Venue',
+        totalSeats: 50,
+        availableSeats: 50,
+        price: 50,
+      },
+    ]
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvents) } as Response)
+      .mockResolvedValue({ json: () => Promise.resolve(updatedEvents) } as Response)
+
+    render(<MemoryRouter><EventList /></MemoryRouter>)
+    await vi.advanceTimersByTimeAsync(10) // flush initial fetch promises
+    expect(screen.queryByText('New Event')).not.toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    await vi.advanceTimersByTimeAsync(0) // flush fetch promises from interval callback
+
+    expect(screen.getByText('New Event')).toBeInTheDocument()
+  })
+
+  test('does not poll after unmount', async () => {
+    const { unmount } = render(<MemoryRouter><EventList /></MemoryRouter>)
+    await vi.advanceTimersByTimeAsync(10)
+
+    unmount()
+    const callsAfterUnmount = vi.mocked(fetch).mock.calls.length
+
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsAfterUnmount)
+  })
+})

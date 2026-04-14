@@ -27,6 +27,16 @@ export default function EventList() {
       })
   }, [])
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetch('/api/events')
+        .then(res => res.json())
+        .then((data: Event[]) => {
+          setEvents(data)})
+        }, 30_000)
+    return () => clearInterval(intervalId)
+  }, [])
+
   const sortEvents = (a, b) => {
     if (sortType == 'name') return a.name - b.name
     if (sortType == 'date') return Date.parse(a.date) - Date.parse(b.date)
