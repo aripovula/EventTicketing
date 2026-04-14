@@ -31,6 +31,11 @@ export default function EventDetail() {
       .catch(() => setLoading(false))
   }, [id])
 
+  useEffect(() => {
+    document.title = event ? `${event.title} | Ticketing` : `Ticketing`
+    return () => { document.title = 'Event Ticketing' }
+  }, [event])
+
   if (loading) return <p>Loading...</p>
   if (notFound) return <p>Event not found.</p>
   if (!event) return <p>Something went wrong. Please try again.</p>
