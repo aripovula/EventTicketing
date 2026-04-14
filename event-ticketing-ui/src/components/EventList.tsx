@@ -38,7 +38,7 @@ export default function EventList() {
   }, [])
 
   const sortEvents = (a, b) => {
-    if (sortType == 'name') return a.name - b.name
+    if (sortType == 'name') return a.title.localeCompare(b.title)
     if (sortType == 'date') return Date.parse(a.date) - Date.parse(b.date)
     return a.price - b.price
   }

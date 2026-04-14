@@ -100,6 +100,18 @@ test('shows sort type dropdown view', async () => {
   expect(sortByDateOption).toBeInTheDocument();
 });
 
+test('sorts events by title', async () => {
+  const user = userEvent.setup()
+  render(<MemoryRouter><EventList /></MemoryRouter>)
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.selectOptions(screen.getByRole('combobox'), 'name')
+
+  const items = screen.getAllByRole('listitem')
+  expect(items[0]).toHaveTextContent('Jazz Night')
+  expect(items[1]).toHaveTextContent('Tech Conference')
+})
+
 test('sorts events by price ascending', async () => {
   const user = userEvent.setup()
   render(<MemoryRouter><EventList /></MemoryRouter>)
