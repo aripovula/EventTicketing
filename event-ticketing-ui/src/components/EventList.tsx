@@ -15,6 +15,7 @@ type Event = {
 export default function EventList() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     fetch('/api/events')
@@ -28,14 +29,24 @@ export default function EventList() {
   if (loading) return <p>Loading events...</p>
 
   return (
-    <ul aria-label="events">
-      {events.map(event => (
-        <li key={event.id}>
-          <h2><Link to={`/events/${event.id}`}>{event.title}</Link></h2>
-          <p>{event.venue} — {new Date(event.date).toLocaleDateString()}</p>
-          <p>${event.price} · {event.availableSeats} seats available</p>
-        </li>
-      ))}
-    </ul>
+    <div>
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        placeholder='type search term'
+      />
+      <ul aria-label="events">
+        {events
+          .filter(e => e.title.toUpperCase().includes(searchTerm.toUpperCase()))
+          .map(event => (
+          <li key={event.id}>
+            <h2><Link to={`/events/${event.id}`}>{event.title}</Link></h2>
+            <p>{event.venue} — {new Date(event.date).toLocaleDateString()}</p>
+            <p>${event.price} · {event.availableSeats} seats available</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
