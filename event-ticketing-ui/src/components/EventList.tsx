@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 type Event = {
@@ -17,6 +17,7 @@ export default function EventList() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortType, setSortType] = useState<'name' | 'date' | 'price'>('name')
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/events')
@@ -37,10 +38,15 @@ export default function EventList() {
     return () => clearInterval(intervalId)
   }, [])
 
-  const sortEvents = (a, b) => {
+  const sortEvents = (a: Event, b: Event) => {
     if (sortType == 'name') return a.title.localeCompare(b.title)
     if (sortType == 'date') return Date.parse(a.date) - Date.parse(b.date)
     return a.price - b.price
+  }
+
+  const changeInputSize = (inputWidth: number, fSize: number) => {
+    searchInputRef.current.style.width=`${inputWidth}px`
+    searchInputRef.current.style.fontSize=`${fSize}px`
   }
 
   if (loading) return <p>Loading events...</p>
@@ -51,7 +57,10 @@ export default function EventList() {
         type="text"
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
+        onFocus={() => changeInputSize(400, 22)}
+        onBlur={() => changeInputSize(200, 12)}
         placeholder='type search term'
+        ref={searchInputRef}
       />
       <select value={sortType} onChange={e => setSortType(e.target.value as 'date' | 'price')}>
         <option id='name' value='name'>sort by name</option>

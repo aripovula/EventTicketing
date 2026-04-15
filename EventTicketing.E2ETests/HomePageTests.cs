@@ -38,6 +38,23 @@ public class HomePageTests : PageTest
     }
 
     [Test]
+    public async Task SearchInputExpandsOnFocusAndShrinksOnBlur()
+    {
+        await Page.GotoAsync("http://localhost:5173");
+        await Page.WaitForSelectorAsync("ul[aria-label='events'] li");
+
+        var input = Page.GetByPlaceholder("type search term");
+
+        await input.ClickAsync();
+        await Expect(input).ToHaveCSS("width", "400px");
+        await Expect(input).ToHaveCSS("font-size", "22px");
+
+        await Page.Keyboard.PressAsync("Tab");
+        await Expect(input).ToHaveCSS("width", "200px");
+        await Expect(input).ToHaveCSS("font-size", "12px");
+    }
+
+    [Test]
     public async Task BackLinkNavigatesBackToEventList()
     {
         await Page.GotoAsync("http://localhost:5173");

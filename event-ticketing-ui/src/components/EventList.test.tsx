@@ -136,6 +136,31 @@ test('sorts events by date ascending', async () => {
   expect(items[1]).toHaveTextContent('Jazz Night')      // August
 })
 
+describe('search input resize', () => {
+  test('expands on focus', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><EventList /></MemoryRouter>)
+    await waitFor(() => screen.getByText('Jazz Night'))
+
+    const input = screen.getByPlaceholderText('type search term')
+    await user.click(input)
+
+    expect(input).toHaveStyle({ width: '400px', fontSize: '22px' })
+  })
+
+  test('shrinks on blur', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><EventList /></MemoryRouter>)
+    await waitFor(() => screen.getByText('Jazz Night'))
+
+    const input = screen.getByPlaceholderText('type search term')
+    await user.click(input)
+    await user.tab()
+
+    expect(input).toHaveStyle({ width: '200px', fontSize: '12px' })
+  })
+})
+
 describe('polling', () => {
   beforeEach(() => {
     vi.useFakeTimers()
