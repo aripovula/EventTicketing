@@ -1,16 +1,23 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import EventList from './components/EventList'
 import EventDetail from './components/EventDetail'
 
 function App() {
   return (
     <BrowserRouter>
-      <main>
-        <Routes>
-          <Route path="/" element={<><h1>Events</h1><EventList /></>} />
-          <Route path="/events/:id" element={<EventDetail />} />
-        </Routes>
-      </main>
+      <div className="min-h-screen bg-gray-50 text-gray-800">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
+            🎟 Event Ticketing
+          </Link>
+        </header>
+        <main className="max-w-3xl mx-auto px-6 py-8">
+          <Routes>
+            <Route path="/" element={<EventList />} />
+            <Route path="/events/:id" element={<EventDetail />} />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   )
 }
