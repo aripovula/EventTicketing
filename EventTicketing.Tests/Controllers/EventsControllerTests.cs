@@ -160,4 +160,75 @@ public class EventsControllerTests : IDisposable
 
         Assert.IsType<NotFoundResult>(result);
     }
+
+    // POST /api/events/{id}/book
+
+    [Fact]
+    public async Task Book_ExistingEvent_ReturnsOk()
+    {
+        var result = await _controller.Book(1);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Book_DecrementsAvailableSeats()
+    {
+        var before = (await _db.Events.FindAsync(1))!.AvailableSeats;
+
+        await _controller.Book(1);
+
+        _db.ChangeTracker.Clear();
+        var ev = await _db.Events.FindAsync(1);
+        Assert.Equal(before - 1, ev!.AvailableSeats);
+    }
+
+    [Fact]
+    public async Task Book_ReturnsUpdatedEvent()
+    {
+        var before = (await _db.Events.FindAsync(1))!.AvailableSeats;
+
+        var result = await _controller.Book(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var ev = Assert.IsType<Event>(ok.Value);
+        Assert.Equal(before - 1, ev.AvailableSeats);
+    }
+
+    [Fact]
+    public async Task Book_UnknownId_ReturnsNotFound()
+    {
+        var result = await _controller.Book(999);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Book_SoldOutEvent_ReturnsConflict()
+    {
+        // Sell out the event first
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 0;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var result = await _controller.Book(1);
+
+        Assert.IsType<ConflictResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Book_SoldOutEvent_DoesNotChangeAvailableSeats()
+    {
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 0;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        await _controller.Book(1);
+
+        _db.ChangeTracker.Clear();
+        var after = await _db.Events.FindAsync(1);
+        Assert.Equal(0, after!.AvailableSeats);
+    }
 }
