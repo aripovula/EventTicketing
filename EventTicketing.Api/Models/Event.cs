@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace EventTicketing.Api.Models;
 
 public class Event
@@ -8,6 +10,7 @@ public class Event
     public DateTime Date { get; set; }
     public string Venue { get; set; } = string.Empty;
     public int TotalSeats { get; set; }
+    [ConcurrencyCheck]
     public int AvailableSeats { get; set; }
     public decimal Price { get; set; }
 }

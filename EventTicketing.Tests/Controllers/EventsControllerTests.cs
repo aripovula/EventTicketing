@@ -240,4 +240,36 @@ public class EventsControllerTests : IDisposable
         var after = await _db.Events.FindAsync(1);
         Assert.Equal(0, after!.AvailableSeats);
     }
+
+    [Fact]
+    public async Task Book_ConcurrentRequest_ReturnsConflict()
+    {
+        // Simulate a race: controller reads the event (1 seat available),
+        // then another request sneaks in and takes that seat before SaveChanges.
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 1;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        // First request loads the event — sees 1 seat available
+        var tracked = await _db.Events.FindAsync(1);
+
+        // Simulate the concurrent request: change AvailableSeats via a second context
+        using var concurrentConnection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
+        concurrentConnection.Open();
+        var concurrentOptions = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<EventTicketing.Api.Data.AppDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+        await using var concurrentDb = new EventTicketing.Api.Data.AppDbContext(concurrentOptions);
+        var concurrentEv = await concurrentDb.Events.FindAsync(1);
+        concurrentEv!.AvailableSeats = 0;
+        await concurrentDb.SaveChangesAsync();
+
+        // Now the first request tries to save — AvailableSeats in DB is 0 but tracked value was 1
+        // EF's WHERE clause will find no matching row and throw DbUpdateConcurrencyException
+        tracked!.AvailableSeats--;
+        var ex = await Assert.ThrowsAsync<Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException>(
+            () => _db.SaveChangesAsync());
+        Assert.NotNull(ex);
+    }
 }

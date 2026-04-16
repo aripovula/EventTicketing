@@ -58,8 +58,6 @@ public class EventsController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    // If SaveChangesAsync() fails the decrement is rolled back and 
-    // the DB stays consistent. The exception propagates as a 500. No data corruption.
     [HttpPost("{id}/book")]
     public async Task<ActionResult<Event>> Book(int id)
     {
@@ -67,7 +65,14 @@ public class EventsController(AppDbContext db) : ControllerBase
         if (ev is null) return NotFound();
         if (ev.AvailableSeats == 0) return Conflict();
         ev.AvailableSeats--;
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict();
+        }
         return Ok(ev);
     }
 }
