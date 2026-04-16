@@ -17,6 +17,11 @@ export default function AdminPage() {
       .then((data: Event[]) => { setEvents(data); setLoading(false) })
   }, [])
 
+  const handleDelete = async (id: number) => {
+    await fetch(`/api/events/${id}`, { method: 'DELETE' })
+    setEvents(prev => prev.filter(ev => ev.id !== id))
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -47,6 +52,12 @@ export default function AdminPage() {
                   >
                     Edit
                   </Link>
+                  <button
+                    onClick={() => handleDelete(ev.id)}
+                    className="text-sm border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    Delete
+                  </button>
                 </div>
               </li>
             ))}

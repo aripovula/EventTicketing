@@ -35,3 +35,41 @@ test('renders existing events after fetch', async () => {
   await waitFor(() => expect(screen.getByText('Jazz Night')).toBeInTheDocument())
   expect(screen.getByText('Tech Conference')).toBeInTheDocument()
 })
+
+test('shows Edit link and Delete button for each event', async () => {
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  expect(screen.getAllByRole('link', { name: /edit/i })).toHaveLength(2)
+  expect(screen.getAllByRole('button', { name: /delete/i })).toHaveLength(2)
+})
+
+test('Edit link points to the correct edit route', async () => {
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  const editLinks = screen.getAllByRole('link', { name: /edit/i })
+  expect(editLinks[0]).toHaveAttribute('href', '/admin/1/edit')
+  expect(editLinks[1]).toHaveAttribute('href', '/admin/2/edit')
+})
+
+test('New event link points to /admin/new', async () => {
+  renderAdminPage()
+  await waitFor(() => screen.getByRole('link', { name: /new event/i }))
+  expect(screen.getByRole('link', { name: /new event/i })).toHaveAttribute('href', '/admin/new')
+})
+
+test('clicking delete calls DELETE and removes event from list', async () => {
+  const user = userEvent.setup()
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvents) } as Response)
+    .mockResolvedValueOnce({ json: () => Promise.resolve({}) } as Response)
+
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.click(screen.getAllByRole('button', { name: /delete/i })[0])
+
+  const deleteCall = vi.mocked(fetch).mock.calls.find(([, opts]) => opts?.method === 'DELETE')
+  expect(deleteCall).toBeDefined()
+  expect(deleteCall![0]).toBe('/api/events/1')
+  await waitFor(() => expect(screen.queryByText('Jazz Night')).not.toBeInTheDocument())
+})

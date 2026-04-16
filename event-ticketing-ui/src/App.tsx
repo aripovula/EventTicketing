@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import EventList from './components/EventList'
 import EventDetail from './components/EventDetail'
 import AdminPage from './components/AdminPage'
+import AdminEventForm from './components/AdminEventForm'
 
 function App() {
   return (
@@ -20,6 +21,8 @@ function App() {
             <Route path="/" element={<EventList />} />
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/new" element={<AdminEventForm />} />
+            <Route path="/admin/:id/edit" element={<AdminEventForm />} />
           </Routes>
         </main>
       </div>
