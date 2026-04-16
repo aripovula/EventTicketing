@@ -98,4 +98,39 @@ public class EventsControllerTests : IDisposable
 
         Assert.Equal(3, await _db.Events.CountAsync());
     }
+
+    // PUT /api/events/{id}
+
+    [Fact]
+    public async Task Update_ExistingId_ReturnsNoContent()
+    {
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", Date = new DateTime(2026, 8, 15, 20, 0, 0), Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+
+        var result = await _controller.Update(1, updated);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task Update_PersistsChangesToDatabase()
+    {
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", Date = new DateTime(2026, 8, 15, 20, 0, 0), Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+
+        await _controller.Update(1, updated);
+
+        _db.ChangeTracker.Clear();
+        var ev = await _db.Events.FindAsync(1);
+        Assert.Equal("Jazz Night Updated", ev!.Title);
+        Assert.Equal(30m, ev.Price);
+    }
+
+    [Fact]
+    public async Task Update_MismatchedId_ReturnsBadRequest()
+    {
+        var updated = new Event { Id = 2, Title = "Wrong", Description = ".", Date = DateTime.Now, Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
+
+        var result = await _controller.Update(1, updated);
+
+        Assert.IsType<BadRequestResult>(result);
+    }
 }
