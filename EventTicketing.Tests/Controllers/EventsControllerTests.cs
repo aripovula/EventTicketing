@@ -133,4 +133,31 @@ public class EventsControllerTests : IDisposable
 
         Assert.IsType<BadRequestResult>(result);
     }
+
+    // DELETE /api/events/{id}
+
+    [Fact]
+    public async Task Delete_ExistingId_ReturnsNoContent()
+    {
+        var result = await _controller.Delete(1);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_RemovesEventFromDatabase()
+    {
+        await _controller.Delete(1);
+
+        Assert.Null(await _db.Events.FindAsync(1));
+        Assert.Equal(1, await _db.Events.CountAsync());
+    }
+
+    [Fact]
+    public async Task Delete_UnknownId_ReturnsNotFound()
+    {
+        var result = await _controller.Delete(999);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
 }

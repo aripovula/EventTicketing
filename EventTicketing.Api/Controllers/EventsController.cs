@@ -39,4 +39,14 @@ public class EventsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return NoContent();
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ev = await db.Events.FindAsync(id);
+        if (ev is null) return NotFound();
+        db.Events.Remove(ev);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
 }
