@@ -118,7 +118,6 @@ public class EventsControllerTests : IDisposable
 
         await _controller.Update(1, updated);
 
-        _db.ChangeTracker.Clear();
         var ev = await _db.Events.FindAsync(1);
         Assert.Equal("Jazz Night Updated", ev!.Title);
         Assert.Equal(30m, ev.Price);
@@ -132,6 +131,16 @@ public class EventsControllerTests : IDisposable
         var result = await _controller.Update(1, updated);
 
         Assert.IsType<BadRequestResult>(result);
+    }
+
+    [Fact]
+    public async Task Update_UnknownId_ReturnsNotFound()
+    {
+        var updated = new Event { Id = 999, Title = "Ghost", Description = ".", Date = DateTime.Now, Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
+
+        var result = await _controller.Update(999, updated);
+
+        Assert.IsType<NotFoundResult>(result);
     }
 
     // DELETE /api/events/{id}

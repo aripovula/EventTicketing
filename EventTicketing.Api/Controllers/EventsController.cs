@@ -32,10 +32,18 @@ public class EventsController(AppDbContext db) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Event ev)
+    public async Task<IActionResult> Update(int id, Event incoming)
     {
-        if (id != ev.Id) return BadRequest();
-        db.Entry(ev).State = EntityState.Modified;
+        if (id != incoming.Id) return BadRequest();
+        var ev = await db.Events.FindAsync(id);
+        if (ev is null) return NotFound();
+        ev.Title = incoming.Title;
+        ev.Description = incoming.Description;
+        ev.Date = incoming.Date;
+        ev.Venue = incoming.Venue;
+        ev.TotalSeats = incoming.TotalSeats;
+        ev.AvailableSeats = incoming.AvailableSeats;
+        ev.Price = incoming.Price;
         await db.SaveChangesAsync();
         return NoContent();
     }
