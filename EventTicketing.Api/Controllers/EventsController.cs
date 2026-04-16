@@ -22,4 +22,12 @@ public class EventsController(AppDbContext db) : ControllerBase
         if (ev is null) return NotFound();
         return Ok(ev);
     }
+
+    [HttpPost]
+    public async Task<ActionResult<Event>> Create(Event ev)
+    {
+        db.Events.Add(ev);
+        await db.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetById), new { id = ev.Id }, ev);
+    }
 }
