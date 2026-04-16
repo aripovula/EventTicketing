@@ -1,0 +1,58 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+
+type Event = {
+  id: number
+  title: string
+  venue: string
+}
+
+export default function AdminPage() {
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/events')
+      .then(res => res.json())
+      .then((data: Event[]) => { setEvents(data); setLoading(false) })
+  }, [])
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 m-0">Admin</h1>
+        <Link
+          to="/admin/new"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors no-underline"
+        >
+          + New event
+        </Link>
+      </div>
+
+      {loading ? (
+        <p className="text-gray-500 text-center py-12">Loading...</p>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <ul aria-label="admin events" className="divide-y divide-gray-100 list-none p-0 m-0">
+            {events.map(ev => (
+              <li key={ev.id} className="flex items-center justify-between px-6 py-4 gap-4">
+                <div>
+                  <p className="font-medium text-gray-900">{ev.title}</p>
+                  <p className="text-sm text-gray-500">{ev.venue}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Link
+                    to={`/admin/${ev.id}/edit`}
+                    className="text-sm border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors no-underline"
+                  >
+                    Edit
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}

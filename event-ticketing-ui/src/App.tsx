@@ -1,6 +1,7 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import EventList from './components/EventList'
 import EventDetail from './components/EventDetail'
+import AdminPage from './components/AdminPage'
 
 function App() {
   return (
@@ -10,11 +11,15 @@ function App() {
           <Link to="/" className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
             🎟 Event Ticketing
           </Link>
+          <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+            Admin
+          </Link>
         </header>
         <main className="max-w-3xl mx-auto px-6 py-8">
           <Routes>
             <Route path="/" element={<EventList />} />
             <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </main>
       </div>
