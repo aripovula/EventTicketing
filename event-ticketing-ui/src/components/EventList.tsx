@@ -66,7 +66,8 @@ export default function EventList() {
           onFocus={() => changeInputSize(400, 22)}
           onBlur={() => changeInputSize(200, 12)}
           placeholder="type search term"
-          className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          style={{ width: '200px', fontSize: '12px' }}
+          className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
         />
         <select
           value={sortType}
