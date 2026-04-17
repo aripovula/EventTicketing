@@ -17,6 +17,8 @@ export default function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [booking, setBooking] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
@@ -42,6 +44,21 @@ export default function EventDetail() {
 
   const soldOut = event.availableSeats === 0
 
+  const handleBook = async () => {
+    setBooking(true)
+    setBookingError(null)
+    const res = await fetch(`/api/events/${id}/book`, { method: 'POST' })
+    if (res.ok) {
+      const updated: Event = await res.json()
+      setEvent(updated)
+    } else if (res.status === 409) {
+      setBookingError('Sorry, this event just sold out.')
+    } else {
+      setBookingError('Booking failed. Please try again.')
+    }
+    setBooking(false)
+  }
+
   return (
     <div>
       <Link to="/" className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors no-underline">
@@ -66,12 +83,16 @@ export default function EventDetail() {
               }
             </p>
           </div>
-          <button
-            disabled={soldOut}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {soldOut ? 'Sold out' : 'Buy ticket'}
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            {bookingError && <p className="text-sm text-red-500">{bookingError}</p>}
+            <button
+              onClick={handleBook}
+              disabled={soldOut || booking}
+              className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {booking ? 'Booking…' : soldOut ? 'Sold out' : 'Buy ticket'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
