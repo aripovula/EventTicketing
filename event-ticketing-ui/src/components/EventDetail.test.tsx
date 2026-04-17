@@ -100,7 +100,7 @@ test('resets document title on unmount', async () => {
   expect(document.title).toBe('Event Ticketing')
 })
 
-// Book endpoint tests
+// Buy ticket button
 
 test('shows Buy ticket button when seats are available', async () => {
   vi.mocked(fetch).mockResolvedValue({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
@@ -116,17 +116,43 @@ test('Buy ticket button is disabled when sold out', async () => {
   expect(screen.getByRole('button', { name: /sold out/i })).toBeDisabled()
 })
 
-test('calls POST /api/events/:id/book when Buy ticket is clicked', async () => {
+test('clicking Buy ticket opens the booking modal', async () => {
+  vi.mocked(fetch).mockResolvedValue({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+})
+
+// Booking via modal
+
+async function openModalAndSubmit(fetchMock: ReturnType<typeof vi.mocked<typeof fetch>>) {
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
+  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
+  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
+  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/events/1/book', { method: 'POST' }))
+}
+
+async function openModalAndSubmitWithSavedCard(fetchMock: ReturnType<typeof vi.mocked<typeof fetch>>) {
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/events/1/book', { method: 'POST' }))
+}
+
+test('confirming modal calls POST /api/events/:id/book', async () => {
   const fetchMock = vi.mocked(fetch)
   fetchMock
     .mockResolvedValueOnce({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
     .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ...mockEvent, availableSeats: 79 }) } as Response)
-
-  renderWithRoute('1')
-  await waitFor(() => screen.getByText('Jazz Night'))
-  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
-
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/events/1/book', { method: 'POST' }))
+  await openModalAndSubmit(fetchMock)
 })
 
 test('decrements availableSeats in UI after successful booking', async () => {
@@ -137,11 +163,17 @@ test('decrements availableSeats in UI after successful booking', async () => {
   renderWithRoute('1')
   await waitFor(() => screen.getByText(/80 of 100 seats available/))
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
+  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
+  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
+  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 
   await waitFor(() => expect(screen.getByText(/79 of 100 seats available/)).toBeInTheDocument())
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
-test('shows sold-out error message on 409 response', async () => {
+test('shows sold-out error in modal on 409 response', async () => {
   vi.mocked(fetch)
     .mockResolvedValueOnce({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
     .mockResolvedValueOnce({ ok: false, status: 409 } as Response)
@@ -149,11 +181,17 @@ test('shows sold-out error message on 409 response', async () => {
   renderWithRoute('1')
   await waitFor(() => screen.getByText('Jazz Night'))
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
+  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
+  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
+  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 
   await waitFor(() => expect(screen.getByText(/sorry, this event just sold out/i)).toBeInTheDocument())
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
 })
 
-test('shows generic error message on non-409 booking failure', async () => {
+test('shows generic error in modal on non-409 booking failure', async () => {
   vi.mocked(fetch)
     .mockResolvedValueOnce({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
     .mockResolvedValueOnce({ ok: false, status: 500 } as Response)
@@ -161,6 +199,56 @@ test('shows generic error message on non-409 booking failure', async () => {
   renderWithRoute('1')
   await waitFor(() => screen.getByText('Jazz Night'))
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
+  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
+  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
+  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 
   await waitFor(() => expect(screen.getByText(/booking failed/i)).toBeInTheDocument())
+})
+
+test('Cancel button closes the modal', async () => {
+  vi.mocked(fetch).mockResolvedValue({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+// Saved email and card in state after booking
+
+test('modal shows Place order heading', async () => {
+  vi.mocked(fetch).mockResolvedValue({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  expect(screen.getByRole('heading', { name: /place order/i })).toBeInTheDocument()
+})
+
+test('after successful booking, reopening modal prefills email and shows saved card radio', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ ...mockEvent, availableSeats: 79 }) } as Response)
+    .mockResolvedValue({ status: 200, json: () => Promise.resolve({ ...mockEvent, availableSeats: 79 }) } as Response)
+
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  // First booking
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
+  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
+  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
+  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+  // Reopen modal
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  expect(screen.getByLabelText(/email/i)).toHaveValue('user@example.com')
+  expect(screen.getByRole('radio', { name: /card ending in 3456/i })).toBeChecked()
+  expect(screen.queryByLabelText(/card number/i)).not.toBeInTheDocument()
 })
