@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import BookingModal from './BookingModal'
 
 type Event = {
@@ -20,6 +20,7 @@ type User = {
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -53,12 +54,16 @@ export default function EventDetail() {
 
   const handleConfirmBooking = async (email: string, cardLast4: string) => {
     setBookingError(null)
-    const res = await fetch(`/api/events/${id}/book`, { method: 'POST' })
+    const res = await fetch(`/api/events/${id}/book`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
     if (res.ok) {
-      const updated: Event = await res.json()
+      const order = await res.json()
       setUserDate({ email, cardLast4 })
-      setEvent(updated)
       setModalOpen(false)
+      navigate(`/orders/${order.id}`)
     } else if (res.status === 409) {
       setBookingError('Sorry, this event just sold out.')
     } else {
