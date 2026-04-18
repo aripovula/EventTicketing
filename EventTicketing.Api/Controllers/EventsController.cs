@@ -58,13 +58,23 @@ public class EventsController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
+    public record BookRequest(string Email);
+
     [HttpPost("{id}/book")]
-    public async Task<ActionResult<Event>> Book(int id)
+    public async Task<ActionResult<Order>> Book(int id, BookRequest request)
     {
         var ev = await db.Events.FindAsync(id);
         if (ev is null) return NotFound();
         if (ev.AvailableSeats == 0) return Conflict();
         ev.AvailableSeats--;
+        var order = new Order
+        {
+            EventId = id,
+            Email = request.Email,
+            Price = ev.Price,
+            BookedAt = DateTime.UtcNow,
+        };
+        db.Orders.Add(order);
         try
         {
             await db.SaveChangesAsync();
@@ -73,7 +83,7 @@ public class EventsController(AppDbContext db) : ControllerBase
         {
             return Conflict();
         }
-        return Ok(ev);
+        return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
     }
 
     [HttpGet("orders/{orderId}")]

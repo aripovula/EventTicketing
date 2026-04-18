@@ -172,12 +172,14 @@ public class EventsControllerTests : IDisposable
 
     // POST /api/events/{id}/book
 
-    [Fact]
-    public async Task Book_ExistingEvent_ReturnsOk()
-    {
-        var result = await _controller.Book(1);
+    private static readonly EventsController.BookRequest TestBookRequest = new("test@example.com");
 
-        Assert.IsType<OkObjectResult>(result.Result);
+    [Fact]
+    public async Task Book_ExistingEvent_ReturnsCreated()
+    {
+        var result = await _controller.Book(1, TestBookRequest);
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
     }
 
     [Fact]
@@ -185,7 +187,7 @@ public class EventsControllerTests : IDisposable
     {
         var before = (await _db.Events.FindAsync(1))!.AvailableSeats;
 
-        await _controller.Book(1);
+        await _controller.Book(1, TestBookRequest);
 
         _db.ChangeTracker.Clear();
         var ev = await _db.Events.FindAsync(1);
@@ -193,21 +195,41 @@ public class EventsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Book_ReturnsUpdatedEvent()
+    public async Task Book_ReturnsCreatedOrder()
     {
-        var before = (await _db.Events.FindAsync(1))!.AvailableSeats;
+        var result = await _controller.Book(1, TestBookRequest);
 
-        var result = await _controller.Book(1);
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var order = Assert.IsType<Order>(created.Value);
+        Assert.True(order.Id > 0);
+        Assert.Equal(1, order.EventId);
+    }
 
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var ev = Assert.IsType<Event>(ok.Value);
-        Assert.Equal(before - 1, ev.AvailableSeats);
+    [Fact]
+    public async Task Book_OrderStoresEmailAndPrice()
+    {
+        var ev = await _db.Events.FindAsync(1);
+
+        var result = await _controller.Book(1, TestBookRequest);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var order = Assert.IsType<Order>(created.Value);
+        Assert.Equal("test@example.com", order.Email);
+        Assert.Equal(ev!.Price, order.Price);
+    }
+
+    [Fact]
+    public async Task Book_PersistsOrderToDatabase()
+    {
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Equal(1, await _db.Orders.CountAsync());
     }
 
     [Fact]
     public async Task Book_UnknownId_ReturnsNotFound()
     {
-        var result = await _controller.Book(999);
+        var result = await _controller.Book(999, TestBookRequest);
 
         Assert.IsType<NotFoundResult>(result.Result);
     }
@@ -220,7 +242,7 @@ public class EventsControllerTests : IDisposable
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
 
-        var result = await _controller.Book(1);
+        var result = await _controller.Book(1, TestBookRequest);
 
         Assert.IsType<ConflictResult>(result.Result);
     }
@@ -233,7 +255,7 @@ public class EventsControllerTests : IDisposable
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
 
-        await _controller.Book(1);
+        await _controller.Book(1, TestBookRequest);
 
         _db.ChangeTracker.Clear();
         var after = await _db.Events.FindAsync(1);
@@ -271,9 +293,8 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task GetOrderById_ExistingOrder_ReturnsOrder()
     {
-        var order = new Order { EventId = 1, Email = "test@example.com", Price = 25m, BookedAt = DateTime.UtcNow };
-        _db.Orders.Add(order);
-        await _db.SaveChangesAsync();
+        var bookResult = await _controller.Book(1, TestBookRequest);
+        var order = Assert.IsType<Order>(Assert.IsType<CreatedAtActionResult>(bookResult.Result).Value);
 
         var result = await _controller.GetOrderById(order.Id);
 

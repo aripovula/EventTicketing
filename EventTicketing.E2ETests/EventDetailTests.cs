@@ -62,14 +62,11 @@ public class EventDetailTests : PageTest
     }
 
     [Test]
-    public async Task BookingModal_ConfirmDecrementsAvailableSeats()
+    public async Task BookingModal_ConfirmNavigatesToOrderConfirmation()
     {
         await Page.GotoAsync("http://localhost:5173");
         await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
         await Page.WaitForSelectorAsync("button:has-text('Buy ticket')");
-
-        var seatsText = await Page.Locator("text=/\\d+ of \\d+ seats available/").TextContentAsync();
-        var before = int.Parse(seatsText!.Split(' ')[0]);
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Buy ticket" }).ClickAsync();
         await Page.GetByLabel("Email").FillAsync("test@example.com");
@@ -77,19 +74,10 @@ public class EventDetailTests : PageTest
         await Page.GetByLabel("Expiry (MM/YY)").FillAsync("12/27");
         await Page.GetByLabel("CVV").FillAsync("123");
 
-        var responseTask = Page.WaitForResponseAsync(resp => resp.Url.Contains("/book") && resp.Status == 200);
+        var responseTask = Page.WaitForResponseAsync(resp => resp.Url.Contains("/book") && resp.Status == 201);
         await Page.GetByRole(AriaRole.Button, new() { Name = "Place order" }).ClickAsync();
         await responseTask;
 
-        await Expect(Page.GetByRole(AriaRole.Dialog)).Not.ToBeVisibleAsync();
-
-        var updatedText = await Page.Locator("text=/\\d+ of \\d+ seats available/").TextContentAsync();
-        var after = int.Parse(updatedText!.Split(' ')[0]);
-        Assert.That(after, Is.EqualTo(before - 1));
-
-        // Restore seat count to avoid DB state pollution
-        var api = await Playwright.APIRequest.NewContextAsync(new() { BaseURL = "http://localhost:5017" });
-        await api.PutAsync("/api/events/1", new() { DataObject = new { Id = 1, Title = "Jazz Night", Description = "An evening of live jazz music.", Date = "2026-08-15T20:00:00", Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = before, Price = 30 } });
-        await api.DisposeAsync();
+        await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/orders/\\d+"));
     }
 }
