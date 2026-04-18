@@ -75,4 +75,12 @@ public class EventsController(AppDbContext db) : ControllerBase
         }
         return Ok(ev);
     }
+
+    [HttpGet("orders/{orderId}")]
+    public async Task<ActionResult<Order>> GetOrderById(int orderId)
+    {
+        var order = await db.Orders.FindAsync(orderId);
+        if (order is null) return NotFound();
+        return Ok(order);
+    }
 }

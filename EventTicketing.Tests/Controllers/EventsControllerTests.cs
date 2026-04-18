@@ -215,7 +215,6 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Book_SoldOutEvent_ReturnsConflict()
     {
-        // Sell out the event first
         var ev = await _db.Events.FindAsync(1);
         ev!.AvailableSeats = 0;
         await _db.SaveChangesAsync();
@@ -244,17 +243,13 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Book_ConcurrentRequest_ReturnsConflict()
     {
-        // Simulate a race: controller reads the event (1 seat available),
-        // then another request sneaks in and takes that seat before SaveChanges.
         var ev = await _db.Events.FindAsync(1);
         ev!.AvailableSeats = 1;
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
 
-        // First request loads the event — sees 1 seat available
         var tracked = await _db.Events.FindAsync(1);
 
-        // Simulate the concurrent request: change AvailableSeats via a second context
         using var concurrentConnection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
         concurrentConnection.Open();
         var concurrentOptions = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<EventTicketing.Api.Data.AppDbContext>()
@@ -265,11 +260,32 @@ public class EventsControllerTests : IDisposable
         concurrentEv!.AvailableSeats = 0;
         await concurrentDb.SaveChangesAsync();
 
-        // Now the first request tries to save — AvailableSeats in DB is 0 but tracked value was 1
-        // EF's WHERE clause will find no matching row and throw DbUpdateConcurrencyException
         tracked!.AvailableSeats--;
         var ex = await Assert.ThrowsAsync<Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException>(
             () => _db.SaveChangesAsync());
         Assert.NotNull(ex);
+    }
+
+    // GET /api/events/orders/{orderId}
+
+    [Fact]
+    public async Task GetOrderById_ExistingOrder_ReturnsOrder()
+    {
+        var order = new Order { EventId = 1, Email = "test@example.com", Price = 25m, BookedAt = DateTime.UtcNow };
+        _db.Orders.Add(order);
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.GetOrderById(order.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.IsType<Order>(ok.Value);
+    }
+
+    [Fact]
+    public async Task GetOrderById_UnknownId_ReturnsNotFound()
+    {
+        var result = await _controller.GetOrderById(999);
+
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 }
