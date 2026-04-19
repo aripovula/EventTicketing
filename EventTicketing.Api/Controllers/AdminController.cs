@@ -19,7 +19,7 @@ public class AdminController(AppDbContext db) : ControllerBase
         return Ok(orders);
     }
 
-    public record EventSummary(int EventId, string Title, int OpeningBalance, int SoldSeats, int RemainingSeats);
+    public record EventSummary(int EventId, string Title, int OpeningBalance, int SoldSeats, int RemainingSeats, decimal Revenue);
 
     [HttpGet("summary")]
     public async Task<ActionResult<IEnumerable<EventSummary>>> GetSummary()
@@ -31,7 +31,8 @@ public class AdminController(AppDbContext db) : ControllerBase
                 e.Title,
                 e.TotalSeats,
                 e.TotalSeats - e.AvailableSeats,
-                e.AvailableSeats))
+                e.AvailableSeats,
+                (e.TotalSeats - e.AvailableSeats) * e.Price))
             .ToListAsync();
         return Ok(summary);
     }

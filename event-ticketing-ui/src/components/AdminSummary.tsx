@@ -7,6 +7,7 @@ type EventSummary = {
   openingBalance: number
   soldSeats: number
   remainingSeats: number
+  revenue: number
 }
 
 export default function AdminSummary() {
@@ -53,6 +54,7 @@ export default function AdminSummary() {
                 <th className="text-right px-6 py-3 font-medium text-gray-500">Opening balance</th>
                 <th className="text-right px-6 py-3 font-medium text-gray-500">Sold</th>
                 <th className="text-right px-6 py-3 font-medium text-gray-500">Remaining</th>
+                <th className="text-right px-6 py-3 font-medium text-gray-500">Revenue</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -62,6 +64,7 @@ export default function AdminSummary() {
                   <td className="px-6 py-4 text-right text-gray-700">{row.openingBalance}</td>
                   <td className="px-6 py-4 text-right text-indigo-600 font-medium">{row.soldSeats}</td>
                   <td className="px-6 py-4 text-right text-gray-700">{row.remainingSeats}</td>
+                  <td className="px-6 py-4 text-right font-medium text-green-600">${row.revenue.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

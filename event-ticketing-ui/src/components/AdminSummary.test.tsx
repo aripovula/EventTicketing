@@ -4,8 +4,8 @@ import { vi } from 'vitest'
 import AdminSummary from './AdminSummary'
 
 const mockRows = [
-  { eventId: 2, title: 'Tech Conference 2026', openingBalance: 500, soldSeats: 3, remainingSeats: 497 },
-  { eventId: 1, title: 'Jazz Night', openingBalance: 100, soldSeats: 10, remainingSeats: 90 },
+  { eventId: 2, title: 'Tech Conference 2026', openingBalance: 500, soldSeats: 3, remainingSeats: 497, revenue: 447 },
+  { eventId: 1, title: 'Jazz Night', openingBalance: 100, soldSeats: 10, remainingSeats: 90, revenue: 250 },
 ]
 
 function renderComponent() {
@@ -56,6 +56,14 @@ test('shows opening balance, sold and remaining seats for each event', async () 
   expect(screen.getByText('90')).toBeInTheDocument()   // remainingSeats
 })
 
+test('shows revenue for each event', async () => {
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockRows) } as Response)
+  renderComponent()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  expect(screen.getByText('$250')).toBeInTheDocument()
+  expect(screen.getByText('$447')).toBeInTheDocument()
+})
+
 test('shows column headers', async () => {
   vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockRows) } as Response)
   renderComponent()
@@ -63,6 +71,7 @@ test('shows column headers', async () => {
   expect(screen.getByText('Opening balance')).toBeInTheDocument()
   expect(screen.getByText('Sold')).toBeInTheDocument()
   expect(screen.getByText('Remaining')).toBeInTheDocument()
+  expect(screen.getByText('Revenue')).toBeInTheDocument()
 })
 
 test('shows error state on failed fetch', async () => {

@@ -156,6 +156,31 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSummary_RevenueIsZeroWhenNoSeatsSold()
+    {
+        var result = await _controller.GetSummary();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var rows = Assert.IsAssignableFrom<IEnumerable<AdminController.EventSummary>>(ok.Value).ToList();
+        Assert.All(rows, r => Assert.Equal(0m, r.Revenue));
+    }
+
+    [Fact]
+    public async Task GetSummary_RevenueIsSoldSeatsByPrice()
+    {
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 98; // 2 seats sold
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.GetSummary();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var rows = Assert.IsAssignableFrom<IEnumerable<AdminController.EventSummary>>(ok.Value).ToList();
+        var jazzRow = rows.Single(r => r.Title == "Jazz Night");
+        Assert.Equal(50m, jazzRow.Revenue); // 2 × $25
+    }
+
+    [Fact]
     public async Task GetSummary_ReturnsEventsOrderedByDate()
     {
         var result = await _controller.GetSummary();
