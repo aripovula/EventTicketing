@@ -173,7 +173,7 @@ public class EventsControllerTests : IDisposable
 
     // POST /api/events/{id}/book
 
-    private static readonly EventsController.BookRequest TestBookRequest = new("test@example.com");
+    private static readonly EventsController.BookRequest TestBookRequest = new() { Email = "test@example.com" };
 
     [Fact]
     public async Task Book_ExistingEvent_ReturnsCreated()
@@ -318,7 +318,7 @@ public class EventsControllerTests : IDisposable
     public async Task GetOrdersByEmail_DoesNotReturnOrdersForOtherEmail()
     {
         await _controller.Book(1, TestBookRequest);
-        await _controller.Book(1, new EventsController.BookRequest("other@example.com"));
+        await _controller.Book(1, new EventsController.BookRequest { Email = "other@example.com" });
 
         var result = await _controller.GetOrdersByEmail("test@example.com");
 
@@ -439,7 +439,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public void BookRequest_ValidEmail_PassesValidation()
     {
-        var req = new EventsController.BookRequest("user@example.com");
+        var req = new EventsController.BookRequest { Email = "user@example.com" };
 
         Assert.Empty(ValidateModel(req));
     }
@@ -447,7 +447,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public void BookRequest_EmptyEmail_FailsValidation()
     {
-        var req = new EventsController.BookRequest("");
+        var req = new EventsController.BookRequest { Email = "" };
 
         var results = ValidateModel(req);
 
@@ -457,7 +457,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public void BookRequest_InvalidEmailFormat_FailsValidation()
     {
-        var req = new EventsController.BookRequest("not-an-email");
+        var req = new EventsController.BookRequest { Email = "not-an-email" };
 
         var results = ValidateModel(req);
 

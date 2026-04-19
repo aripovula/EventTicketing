@@ -59,7 +59,12 @@ public class EventsController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    public record BookRequest([property: Required][property: EmailAddress] string Email);
+    public class BookRequest
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+    }
 
     [HttpPost("{id}/book")]
     public async Task<ActionResult<Order>> Book(int id, BookRequest request)
