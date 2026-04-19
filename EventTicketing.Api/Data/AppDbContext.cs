@@ -20,7 +20,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Venue = "Blue Note Club",
                 TotalSeats = 100,
                 AvailableSeats = 100,
-                Price = 25.00m
+                Price = 25.00m,
+                ImageUrl = "https://images.unsplash.com/photo-1548163111-bc419d75fef4?w=800&q=80"
             },
             new Event
             {
@@ -31,7 +32,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Venue = "City Convention Centre",
                 TotalSeats = 500,
                 AvailableSeats = 500,
-                Price = 149.00m
+                Price = 149.00m,
+                ImageUrl = "https://images.unsplash.com/photo-1582192730841-2a682d7375f9?w=800&q=80"
             }
         );
     }

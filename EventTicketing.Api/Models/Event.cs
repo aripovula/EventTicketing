@@ -29,4 +29,7 @@ public class Event
 
     [Range(typeof(decimal), "0", "100000")]
     public decimal Price { get; set; }
+
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
 }
