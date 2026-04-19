@@ -4,6 +4,7 @@ import EventDetail from './components/EventDetail'
 import AdminPage from './components/AdminPage'
 import AdminEventForm from './components/AdminEventForm'
 import OrderConfirmation from './components/OrderConfirmation'
+import OrdersList from './components/OrdersList'
 
 function App() {
   return (
@@ -13,9 +14,14 @@ function App() {
           <Link to="/" className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
             🎟 Event Ticketing
           </Link>
-          <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
-            Admin
-          </Link>
+          <nav className="flex items-center gap-4">
+            <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+              My orders
+            </Link>
+            <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+              Admin
+            </Link>
+          </nav>
         </header>
         <main className="max-w-3xl mx-auto px-6 py-8">
           <Routes>
@@ -24,6 +30,7 @@ function App() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/new" element={<AdminEventForm />} />
             <Route path="/admin/:id/edit" element={<AdminEventForm />} />
+            <Route path="/orders" element={<OrdersList />} />
             <Route path="/orders/:id" element={<OrderConfirmation />} />
           </Routes>
         </main>
