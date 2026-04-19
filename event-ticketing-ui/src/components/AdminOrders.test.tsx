@@ -48,8 +48,8 @@ test('shows loading state initially', () => {
 test('shows all orders after fetch', async () => {
   vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
   renderComponent()
-  await waitFor(() => screen.getByText('Jazz Night'))
-  expect(screen.getByText('Tech Conference 2026')).toBeInTheDocument()
+  await waitFor(() => screen.getByText('alice@example.com'))
+  expect(screen.getByText('bob@example.com')).toBeInTheDocument()
 })
 
 test('shows email for each order', async () => {
@@ -71,6 +71,43 @@ test('shows order ids', async () => {
   renderComponent()
   await waitFor(() => expect(screen.getByText('#10')).toBeInTheDocument())
   expect(screen.getByText('#11')).toBeInTheDocument()
+})
+
+test('shows event filter dropdown with all event options', async () => {
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
+  renderComponent()
+  await waitFor(() => screen.getByText('alice@example.com'))
+
+  const dropdown = screen.getByRole('combobox', { name: /filter by event/i })
+  expect(dropdown).toBeInTheDocument()
+  expect(screen.getByRole('option', { name: 'All events' })).toBeInTheDocument()
+  expect(screen.getByRole('option', { name: 'Jazz Night' })).toBeInTheDocument()
+  expect(screen.getByRole('option', { name: 'Tech Conference 2026' })).toBeInTheDocument()
+})
+
+test('selecting an event filters the table', async () => {
+  const user = (await import('@testing-library/user-event')).default.setup()
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
+  renderComponent()
+  await waitFor(() => screen.getByText('alice@example.com'))
+
+  await user.selectOptions(screen.getByRole('combobox', { name: /filter by event/i }), 'Jazz Night')
+
+  expect(screen.getByText('alice@example.com')).toBeInTheDocument()
+  expect(screen.queryByText('bob@example.com')).not.toBeInTheDocument()
+})
+
+test('selecting All events shows all orders', async () => {
+  const user = (await import('@testing-library/user-event')).default.setup()
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
+  renderComponent()
+  await waitFor(() => screen.getByText('alice@example.com'))
+
+  await user.selectOptions(screen.getByRole('combobox', { name: /filter by event/i }), 'Jazz Night')
+  await user.selectOptions(screen.getByRole('combobox', { name: /filter by event/i }), '')
+
+  expect(screen.getByText('alice@example.com')).toBeInTheDocument()
+  expect(screen.getByText('bob@example.com')).toBeInTheDocument()
 })
 
 test('shows empty state when no orders', async () => {
