@@ -9,6 +9,7 @@ type EventFormData = {
   totalSeats: number
   availableSeats: number
   price: number
+  imageUrl: string
 }
 
 const emptyForm: EventFormData = {
@@ -19,6 +20,7 @@ const emptyForm: EventFormData = {
   totalSeats: 0,
   availableSeats: 0,
   price: 0,
+  imageUrl: '',
 }
 
 const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
@@ -45,6 +47,7 @@ export default function AdminEventForm() {
           totalSeats: data.totalSeats,
           availableSeats: data.availableSeats,
           price: data.price,
+          imageUrl: data.imageUrl ?? '',
         })
         setLoading(false)
       })
@@ -106,6 +109,14 @@ export default function AdminEventForm() {
           <div>
             <label htmlFor="description" className={labelClass}>Description</label>
             <textarea id="description" name="description" value={form.description} onChange={handleChange} required rows={3} className={inputClass} />
+          </div>
+
+          <div>
+            <label htmlFor="imageUrl" className={labelClass}>Image URL</label>
+            <input id="imageUrl" name="imageUrl" type="url" value={form.imageUrl} onChange={handleChange} placeholder="https://images.unsplash.com/…" className={inputClass} />
+            {form.imageUrl && (
+              <img src={form.imageUrl} alt="Preview" className="mt-2 h-32 w-auto rounded-lg object-cover" />
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

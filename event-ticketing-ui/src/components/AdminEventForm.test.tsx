@@ -12,6 +12,7 @@ const mockEvent = {
   totalSeats: 100,
   availableSeats: 80,
   price: 25,
+  imageUrl: 'https://images.unsplash.com/photo-123',
 }
 
 function renderCreateForm() {
@@ -55,6 +56,7 @@ test('create form shows all fields empty', () => {
   renderCreateForm()
   expect(screen.getByLabelText('Title')).toHaveValue('')
   expect(screen.getByLabelText('Venue')).toHaveValue('')
+  expect(screen.getByLabelText('Image URL')).toHaveValue('')
 })
 
 test('create form shows Create event button', () => {
@@ -108,6 +110,20 @@ test('edit form pre-populates fields from fetched event', async () => {
   renderEditForm()
   await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Jazz Night'))
   expect(screen.getByLabelText('Venue')).toHaveValue('Blue Note Club')
+  expect(screen.getByLabelText('Image URL')).toHaveValue('https://images.unsplash.com/photo-123')
+})
+
+test('edit form shows image preview when imageUrl is present', async () => {
+  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  renderEditForm()
+  await waitFor(() => screen.getByLabelText('Title'))
+  const preview = screen.getByRole('img', { name: 'Preview' })
+  expect(preview).toHaveAttribute('src', 'https://images.unsplash.com/photo-123')
+})
+
+test('does not show image preview when imageUrl is empty', () => {
+  renderCreateForm()
+  expect(screen.queryByRole('img', { name: 'Preview' })).not.toBeInTheDocument()
 })
 
 test('submitting edit form calls PUT and navigates to /admin', async () => {
