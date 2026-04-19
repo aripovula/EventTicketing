@@ -10,6 +10,7 @@ type Event = {
   totalSeats: number
   availableSeats: number
   price: number
+  imageUrl?: string
 }
 
 export default function EventList() {
@@ -82,27 +83,36 @@ export default function EventList() {
 
       <ul aria-label="events" className="space-y-4 list-none p-0 m-0">
         {filtered.map(event => (
-          <li key={event.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-semibold text-gray-900 mb-1 mt-0">
+          <li key={event.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex h-[220px]">
+            {event.imageUrl && (
+              <img
+                src={event.imageUrl}
+                alt={event.title}
+                className="aspect-[4/3] h-full object-cover shrink-0"
+              />
+            )}
+            <div className="flex flex-col justify-between p-5 flex-1 min-w-0">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-1 mt-0">
                   <Link to={`/events/${event.id}`} className="hover:text-indigo-600 transition-colors no-underline">
                     {event.title}
                   </Link>
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-base text-gray-500">
                   {event.venue} · {new Date(event.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                 </p>
-                <p className="text-sm text-gray-400 mt-1">{event.availableSeats} seats available</p>
               </div>
-              <div className="text-right shrink-0">
-                <span className="text-lg font-bold text-indigo-600">${event.price}</span>
-                <Link
-                  to={`/events/${event.id}`}
-                  className="block mt-2 text-xs bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 transition-colors no-underline"
-                >
-                  View →
-                </Link>
+              <div className="flex items-end justify-between">
+                <p className="text-sm text-gray-400">{event.availableSeats} seats available</p>
+                <div className="text-right shrink-0">
+                  <span className="text-xl font-bold text-indigo-600">${event.price}</span>
+                  <Link
+                    to={`/events/${event.id}`}
+                    className="block mt-2 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 transition-colors no-underline"
+                  >
+                    View →
+                  </Link>
+                </div>
               </div>
             </div>
           </li>

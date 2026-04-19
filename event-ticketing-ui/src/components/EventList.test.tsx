@@ -136,6 +136,25 @@ test('sorts events by date ascending', async () => {
   expect(items[1]).toHaveTextContent('Jazz Night')      // August
 })
 
+test('shows thumbnail image when imageUrl is present', async () => {
+  const eventsWithImage = [{ ...mockEvents[0], imageUrl: 'https://images.unsplash.com/photo-123' }]
+  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(eventsWithImage) } as Response)
+
+  render(<MemoryRouter><EventList /></MemoryRouter>)
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  const img = screen.getByRole('img', { name: 'Jazz Night' })
+  expect(img).toBeInTheDocument()
+  expect(img).toHaveAttribute('src', 'https://images.unsplash.com/photo-123')
+})
+
+test('does not show img element when imageUrl is absent', async () => {
+  render(<MemoryRouter><EventList /></MemoryRouter>)
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
+})
+
 describe('search input resize', () => {
   test('expands on focus', async () => {
     const user = userEvent.setup()

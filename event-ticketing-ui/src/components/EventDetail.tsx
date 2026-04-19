@@ -11,6 +11,7 @@ type Event = {
   totalSeats: number
   availableSeats: number
   price: number
+  imageUrl?: string
 }
 
 type User = {
@@ -77,7 +78,15 @@ export default function EventDetail() {
         ← Back to events
       </Link>
 
-      <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+      <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {event.imageUrl && (
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            className="w-full h-64 object-cover"
+          />
+        )}
+        <div className="p-6">
         <h1 className="text-3xl font-bold text-gray-900 mt-0 mb-2">{event.title}</h1>
         <p className="text-gray-500 text-sm mb-6">
           {event.venue} · {new Date(event.date).toLocaleDateString(undefined, { dateStyle: 'long' })}
@@ -102,6 +111,7 @@ export default function EventDetail() {
           >
             {soldOut ? 'Sold out' : 'Buy ticket'}
           </button>
+        </div>
         </div>
       </div>
 

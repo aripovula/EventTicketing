@@ -434,6 +434,16 @@ public class EventsControllerTests : IDisposable
         Assert.Contains(results, r => r.MemberNames.Contains("Price"));
     }
 
+    [Fact]
+    public void Event_ImageUrlExceedsMaxLength_FailsValidation()
+    {
+        var ev = new Event { Title = "T", Description = "D", Venue = "V", TotalSeats = 1, AvailableSeats = 0, Price = 0m, ImageUrl = new string('x', 501) };
+
+        var results = ValidateModel(ev);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("ImageUrl"));
+    }
+
     // Model validation — BookRequest
 
     [Fact]

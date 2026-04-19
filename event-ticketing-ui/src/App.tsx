@@ -23,7 +23,7 @@ function App() {
             </Link>
           </nav>
         </header>
-        <main className="max-w-3xl mx-auto px-6 py-8">
+        <main className="max-w-4xl mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<EventList />} />
             <Route path="/events/:id" element={<EventDetail />} />

@@ -101,6 +101,25 @@ test('resets document title on unmount', async () => {
   expect(document.title).toBe('Event Ticketing')
 })
 
+test('shows thumbnail image when imageUrl is present', async () => {
+  const eventWithImage = { ...mockEvent, imageUrl: 'https://images.unsplash.com/photo-123' }
+  vi.mocked(fetch).mockResolvedValue({ status: 200, json: () => Promise.resolve(eventWithImage) } as Response)
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  const img = screen.getByRole('img', { name: 'Jazz Night' })
+  expect(img).toBeInTheDocument()
+  expect(img).toHaveAttribute('src', 'https://images.unsplash.com/photo-123')
+})
+
+test('does not show img element when imageUrl is absent', async () => {
+  vi.mocked(fetch).mockResolvedValue({ status: 200, json: () => Promise.resolve(mockEvent) } as Response)
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
+})
+
 // Buy ticket button
 
 test('shows Buy ticket button when seats are available', async () => {
