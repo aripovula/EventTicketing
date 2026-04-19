@@ -18,4 +18,21 @@ public class AdminController(AppDbContext db) : ControllerBase
             .ToListAsync();
         return Ok(orders);
     }
+
+    public record EventSummary(int EventId, string Title, int OpeningBalance, int SoldSeats, int RemainingSeats);
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<IEnumerable<EventSummary>>> GetSummary()
+    {
+        var summary = await db.Events
+            .OrderBy(e => e.Date)
+            .Select(e => new EventSummary(
+                e.Id,
+                e.Title,
+                e.TotalSeats,
+                e.TotalSeats - e.AvailableSeats,
+                e.AvailableSeats))
+            .ToListAsync();
+        return Ok(summary);
+    }
 }
