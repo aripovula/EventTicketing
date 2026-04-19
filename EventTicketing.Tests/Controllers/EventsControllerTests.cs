@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
@@ -308,5 +309,107 @@ public class EventsControllerTests : IDisposable
         var result = await _controller.GetOrderById(999);
 
         Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    // Model validation — Event
+
+    private static List<ValidationResult> ValidateModel(object model)
+    {
+        var results = new List<ValidationResult>();
+        var ctx = new ValidationContext(model);
+        Validator.TryValidateObject(model, ctx, results, validateAllProperties: true);
+        return results;
+    }
+
+    [Fact]
+    public void Event_ValidModel_PassesValidation()
+    {
+        var ev = new Event { Title = "T", Description = "D", Venue = "V", TotalSeats = 1, AvailableSeats = 0, Price = 0m };
+
+        Assert.Empty(ValidateModel(ev));
+    }
+
+    [Theory]
+    [InlineData("Title", "")]
+    [InlineData("Description", "")]
+    [InlineData("Venue", "")]
+    public void Event_EmptyRequiredString_FailsValidation(string propertyName, string value)
+    {
+        var ev = new Event { Title = "T", Description = "D", Venue = "V", TotalSeats = 1, AvailableSeats = 0, Price = 0m };
+        typeof(Event).GetProperty(propertyName)!.SetValue(ev, value);
+
+        var results = ValidateModel(ev);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(propertyName));
+    }
+
+    [Fact]
+    public void Event_TitleExceedsMaxLength_FailsValidation()
+    {
+        var ev = new Event { Title = new string('x', 201), Description = "D", Venue = "V", TotalSeats = 1, AvailableSeats = 0, Price = 0m };
+
+        var results = ValidateModel(ev);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("Title"));
+    }
+
+    [Fact]
+    public void Event_TotalSeatsZero_FailsValidation()
+    {
+        var ev = new Event { Title = "T", Description = "D", Venue = "V", TotalSeats = 0, AvailableSeats = 0, Price = 0m };
+
+        var results = ValidateModel(ev);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("TotalSeats"));
+    }
+
+    [Fact]
+    public void Event_AvailableSeatsNegative_FailsValidation()
+    {
+        var ev = new Event { Title = "T", Description = "D", Venue = "V", TotalSeats = 1, AvailableSeats = -1, Price = 0m };
+
+        var results = ValidateModel(ev);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("AvailableSeats"));
+    }
+
+    [Fact]
+    public void Event_PriceExceedsMax_FailsValidation()
+    {
+        var ev = new Event { Title = "T", Description = "D", Venue = "V", TotalSeats = 1, AvailableSeats = 0, Price = 100_001m };
+
+        var results = ValidateModel(ev);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("Price"));
+    }
+
+    // Model validation — BookRequest
+
+    [Fact]
+    public void BookRequest_ValidEmail_PassesValidation()
+    {
+        var req = new EventsController.BookRequest("user@example.com");
+
+        Assert.Empty(ValidateModel(req));
+    }
+
+    [Fact]
+    public void BookRequest_EmptyEmail_FailsValidation()
+    {
+        var req = new EventsController.BookRequest("");
+
+        var results = ValidateModel(req);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("Email"));
+    }
+
+    [Fact]
+    public void BookRequest_InvalidEmailFormat_FailsValidation()
+    {
+        var req = new EventsController.BookRequest("not-an-email");
+
+        var results = ValidateModel(req);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("Email"));
     }
 }

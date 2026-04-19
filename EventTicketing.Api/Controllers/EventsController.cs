@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -58,7 +59,7 @@ public class EventsController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    public record BookRequest(string Email);
+    public record BookRequest([property: Required][property: EmailAddress] string Email);
 
     [HttpPost("{id}/book")]
     public async Task<ActionResult<Order>> Book(int id, BookRequest request)
