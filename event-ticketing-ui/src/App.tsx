@@ -6,6 +6,7 @@ import AdminEventForm from './components/AdminEventForm'
 import OrderConfirmation from './components/OrderConfirmation'
 import OrdersList from './components/OrdersList'
 import AdminOrders from './components/AdminOrders'
+import AdminSummary from './components/AdminSummary'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
+            <Route path="/admin/summary" element={<AdminSummary />} />
             <Route path="/admin/new" element={<AdminEventForm />} />
             <Route path="/admin/:id/edit" element={<AdminEventForm />} />
             <Route path="/orders" element={<OrdersList />} />

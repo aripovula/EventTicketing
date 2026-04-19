@@ -28,6 +28,12 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold text-gray-900 m-0">Admin</h1>
         <div className="flex gap-3">
           <Link
+            to="/admin/summary"
+            className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors no-underline"
+          >
+            Seat summary
+          </Link>
+          <Link
             to="/admin/orders"
             className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors no-underline"
           >
