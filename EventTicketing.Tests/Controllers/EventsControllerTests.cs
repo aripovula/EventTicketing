@@ -289,6 +289,57 @@ public class EventsControllerTests : IDisposable
         Assert.NotNull(ex);
     }
 
+    // GET /api/events/orders?email=...
+
+    [Fact]
+    public async Task GetOrdersByEmail_ReturnsMatchingOrders()
+    {
+        await _controller.Book(1, TestBookRequest);
+        await _controller.Book(1, TestBookRequest);
+
+        var result = await _controller.GetOrdersByEmail("test@example.com");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var orders = Assert.IsAssignableFrom<IEnumerable<Order>>(ok.Value);
+        Assert.Equal(2, orders.Count());
+    }
+
+    [Fact]
+    public async Task GetOrdersByEmail_UnknownEmail_ReturnsEmptyList()
+    {
+        var result = await _controller.GetOrdersByEmail("nobody@example.com");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var orders = Assert.IsAssignableFrom<IEnumerable<Order>>(ok.Value);
+        Assert.Empty(orders);
+    }
+
+    [Fact]
+    public async Task GetOrdersByEmail_DoesNotReturnOrdersForOtherEmail()
+    {
+        await _controller.Book(1, TestBookRequest);
+        await _controller.Book(1, new EventsController.BookRequest("other@example.com"));
+
+        var result = await _controller.GetOrdersByEmail("test@example.com");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var orders = Assert.IsAssignableFrom<IEnumerable<Order>>(ok.Value);
+        Assert.All(orders, o => Assert.Equal("test@example.com", o.Email));
+    }
+
+    [Fact]
+    public async Task GetOrdersByEmail_ReturnsOrdersNewestFirst()
+    {
+        await _controller.Book(1, TestBookRequest);
+        await _controller.Book(1, TestBookRequest);
+
+        var result = await _controller.GetOrdersByEmail("test@example.com");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var orders = Assert.IsAssignableFrom<IEnumerable<Order>>(ok.Value).ToList();
+        Assert.True(orders[0].Id > orders[1].Id);
+    }
+
     // GET /api/events/orders/{orderId}
 
     [Fact]

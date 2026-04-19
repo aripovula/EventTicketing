@@ -87,6 +87,16 @@ public class EventsController(AppDbContext db) : ControllerBase
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
     }
 
+    [HttpGet("orders")]
+    public async Task<ActionResult<IEnumerable<Order>>> GetOrdersByEmail([FromQuery] string email)
+    {
+        var orders = await db.Orders
+            .Where(o => o.Email == email)
+            .OrderByDescending(o => o.BookedAt)
+            .ToListAsync();
+        return Ok(orders);
+    }
+
     [HttpGet("orders/{orderId}")]
     public async Task<ActionResult<Order>> GetOrderById(int orderId)
     {
