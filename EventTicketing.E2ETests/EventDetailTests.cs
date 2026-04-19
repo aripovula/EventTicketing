@@ -79,5 +79,8 @@ public class EventDetailTests : PageTest
         await responseTask;
 
         await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/orders/\\d+"));
+        await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "You're going!" })).ToBeVisibleAsync();
+        await Expect(Page.GetByText("Jazz Night")).ToBeVisibleAsync();
+        await Expect(Page.GetByText("test@example.com")).ToBeVisibleAsync();
     }
 }
