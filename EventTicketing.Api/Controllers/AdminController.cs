@@ -1,5 +1,6 @@
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
+[Authorize(Roles = "admin")]
 public class AdminController(AppDbContext db) : ControllerBase
 {
     [HttpGet("orders")]
