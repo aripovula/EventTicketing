@@ -111,6 +111,7 @@ public class AdminPageTests : PageTest
         await createTask;
 
         await Expect(Page).ToHaveURLAsync("http://localhost:5173/admin");
+        await Expect(listItems.First).ToBeVisibleAsync();
         var countAfterCreate = await listItems.CountAsync();
 
         await listItems.Last.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
