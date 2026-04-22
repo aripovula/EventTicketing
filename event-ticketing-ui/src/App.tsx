@@ -1,4 +1,4 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, useNavigate } from 'react-router-dom'
 import EventList from './components/EventList'
 import EventDetail from './components/EventDetail'
 import AdminPage from './components/AdminPage'
@@ -8,6 +8,50 @@ import OrdersList from './components/OrdersList'
 import AdminOrders from './components/AdminOrders'
 import AdminSummary from './components/AdminSummary'
 import LoginPage from './components/LoginPage'
+import RequireAdmin from './components/RequireAdmin'
+import { useAuth } from './context/AuthContext'
+
+function HeaderNav() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  if (user) {
+    return (
+      <nav className="flex items-center gap-4">
+        <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+          My orders
+        </Link>
+        {user.role === 'admin' && (
+          <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+            Admin
+          </Link>
+        )}
+        <button
+          onClick={handleLogout}
+          className="text-sm border border-gray-300 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Sign out
+        </button>
+      </nav>
+    )
+  }
+
+  return (
+    <nav className="flex items-center gap-4">
+      <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+        My orders
+      </Link>
+      <Link to="/login" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+        Sign in
+      </Link>
+    </nav>
+  )
+}
 
 function App() {
   return (
@@ -17,30 +61,22 @@ function App() {
           <Link to="/" className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
             🎟 Event Ticketing
           </Link>
-          <nav className="flex items-center gap-4">
-            <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
-              My orders
-            </Link>
-            <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
-              Admin
-            </Link>
-            <Link to="/login" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
-              Sign in
-            </Link>
-          </nav>
+          <HeaderNav />
         </header>
         <main className="max-w-4xl mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<EventList />} />
             <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/orders" element={<AdminOrders />} />
-            <Route path="/admin/summary" element={<AdminSummary />} />
-            <Route path="/admin/new" element={<AdminEventForm />} />
-            <Route path="/admin/:id/edit" element={<AdminEventForm />} />
             <Route path="/orders" element={<OrdersList />} />
             <Route path="/orders/:id" element={<OrderConfirmation />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route element={<RequireAdmin />}>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/summary" element={<AdminSummary />} />
+              <Route path="/admin/new" element={<AdminEventForm />} />
+              <Route path="/admin/:id/edit" element={<AdminEventForm />} />
+            </Route>
           </Routes>
         </main>
       </div>
