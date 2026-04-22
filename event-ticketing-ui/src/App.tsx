@@ -7,6 +7,7 @@ import OrderConfirmation from './components/OrderConfirmation'
 import OrdersList from './components/OrdersList'
 import AdminOrders from './components/AdminOrders'
 import AdminSummary from './components/AdminSummary'
+import LoginPage from './components/LoginPage'
 
 function App() {
   return (
@@ -23,6 +24,9 @@ function App() {
             <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
               Admin
             </Link>
+            <Link to="/login" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+              Sign in
+            </Link>
           </nav>
         </header>
         <main className="max-w-4xl mx-auto px-4 py-8">
@@ -36,6 +40,7 @@ function App() {
             <Route path="/admin/:id/edit" element={<AdminEventForm />} />
             <Route path="/orders" element={<OrdersList />} />
             <Route path="/orders/:id" element={<OrderConfirmation />} />
+            <Route path="/login" element={<LoginPage />} />
           </Routes>
         </main>
       </div>
