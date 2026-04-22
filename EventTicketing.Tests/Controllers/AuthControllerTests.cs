@@ -4,6 +4,8 @@ using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
 using EventTicketing.Api.Services;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -42,7 +44,14 @@ public class AuthControllerTests : IDisposable
             })
             .Build();
 
-        _controller = new AuthController(_db, new TokenService(config));
+        var env = new FakeWebHostEnvironment(isProduction: false);
+        _controller = new AuthController(_db, new TokenService(config), env);
+
+        // Wire up an HttpContext so Response.Cookies is available
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
     }
 
     public void Dispose()
@@ -66,35 +75,36 @@ public class AuthControllerTests : IDisposable
     public async Task Login_WithValidCredentials_Returns200()
     {
         SeedUser();
-        var result = await _controller.Login(new AuthController.LoginRequest
-            { Email = TestEmail, Password = TestPassword });
+        var result = await _controller.Login(
+            new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword });
 
         Assert.IsType<OkObjectResult>(result.Result);
     }
 
     [Fact]
-    public async Task Login_WithValidCredentials_ReturnsToken()
-    {
-        SeedUser();
-        var ok = (OkObjectResult)(await _controller.Login(
-            new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword })).Result!;
-
-        var response = Assert.IsType<AuthController.LoginResponse>(ok.Value);
-        Assert.False(string.IsNullOrWhiteSpace(response.Token));
-    }
-
-    [Fact]
-    public async Task Login_WithValidCredentials_ReturnsCorrectUserInfo()
+    public async Task Login_WithValidCredentials_ReturnsUserInfoWithoutToken()
     {
         var seeded = SeedUser();
         var ok = (OkObjectResult)(await _controller.Login(
             new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword })).Result!;
 
-        var response = Assert.IsType<AuthController.LoginResponse>(ok.Value);
-        Assert.Equal(seeded.Id,    response.UserId);
-        Assert.Equal(seeded.Name,  response.Name);
-        Assert.Equal(seeded.Email, response.Email);
-        Assert.Equal("user",       response.Role);
+        var info = Assert.IsType<AuthController.UserInfo>(ok.Value);
+        Assert.Equal(seeded.Id,    info.UserId);
+        Assert.Equal(seeded.Name,  info.Name);
+        Assert.Equal(seeded.Email, info.Email);
+        Assert.Equal("user",       info.Role);
+    }
+
+    [Fact]
+    public async Task Login_SetsHttpOnlyCookie()
+    {
+        SeedUser();
+        await _controller.Login(
+            new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword });
+
+        var cookies = _controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+        Assert.Contains(AuthController.CookieName, cookies);
+        Assert.Contains("httponly", cookies, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -104,22 +114,25 @@ public class AuthControllerTests : IDisposable
         var ok = (OkObjectResult)(await _controller.Login(
             new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword })).Result!;
 
-        var response = Assert.IsType<AuthController.LoginResponse>(ok.Value);
-        Assert.Equal("admin", response.Role);
+        var info = Assert.IsType<AuthController.UserInfo>(ok.Value);
+        Assert.Equal("admin", info.Role);
     }
 
     [Fact]
-    public async Task Login_TokenContainsCorrectClaims()
+    public async Task Login_CookieContainsValidJwt()
     {
         SeedUser();
-        var ok = (OkObjectResult)(await _controller.Login(
-            new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword })).Result!;
+        await _controller.Login(
+            new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword });
 
-        var response = Assert.IsType<AuthController.LoginResponse>(ok.Value);
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(response.Token);
+        var setCookieHeader = _controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+        // Extract token value: "auth_token=<value>;"
+        var tokenValue = setCookieHeader
+            .Split(';')[0]
+            .Replace(AuthController.CookieName + "=", "");
 
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(tokenValue);
         Assert.Contains(token.Claims, c => c.Type == ClaimTypes.Email && c.Value == TestEmail);
-        Assert.Contains(token.Claims, c => c.Type == ClaimTypes.Role  && c.Value == "user");
     }
 
     // ── Login failure ──────────────────────────────────────────────────────────
@@ -146,7 +159,6 @@ public class AuthControllerTests : IDisposable
     [Fact]
     public async Task Login_WithWrongPassword_DoesNotLeakReason()
     {
-        // Both bad-email and bad-password return the same generic message
         SeedUser();
         var badPassword = (UnauthorizedObjectResult)(await _controller.Login(
             new AuthController.LoginRequest { Email = TestEmail, Password = "wrong" })).Result!;
@@ -156,4 +168,73 @@ public class AuthControllerTests : IDisposable
 
         Assert.Equal(badPassword.Value?.ToString(), badEmail.Value?.ToString());
     }
+
+    // ── /me ───────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Me_WithAuthenticatedUser_ReturnsUserInfo()
+    {
+        var seeded = SeedUser();
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(seeded);
+
+        var result = _controller.Me();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var info = Assert.IsType<AuthController.UserInfo>(ok.Value);
+        Assert.Equal(seeded.Id,    info.UserId);
+        Assert.Equal(seeded.Name,  info.Name);
+        Assert.Equal(seeded.Email, info.Email);
+        Assert.Equal("user",       info.Role);
+    }
+
+    [Fact]
+    public void Me_WithMissingClaims_Returns401()
+    {
+        _controller.ControllerContext.HttpContext.User =
+            new System.Security.Claims.ClaimsPrincipal();
+
+        var result = _controller.Me();
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    // ── /logout ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Logout_Returns204()
+    {
+        var result = _controller.Logout();
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public void Logout_DeletesCookie()
+    {
+        var result = _controller.Logout();
+        var cookies = _controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+        // Deleted cookies have an expiry in the past
+        Assert.Contains(AuthController.CookieName, cookies);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static System.Security.Claims.ClaimsPrincipal MakePrincipal(User user) =>
+        new(new System.Security.Claims.ClaimsIdentity(
+        [
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.Name),
+            new(ClaimTypes.Role, user.Role),
+        ], "Test"));
+}
+
+// Minimal IWebHostEnvironment stub for tests
+file sealed class FakeWebHostEnvironment(bool isProduction) : IWebHostEnvironment
+{
+    public string EnvironmentName { get; set; } = isProduction ? "Production" : "Development";
+    public string ApplicationName { get; set; } = "Test";
+    public string WebRootPath { get; set; } = "";
+    public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = null!;
+    public string ContentRootPath { get; set; } = "";
+    public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
 }
