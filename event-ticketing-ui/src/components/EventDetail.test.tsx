@@ -245,8 +245,20 @@ test('modal shows Place order heading', async () => {
   expect(screen.getByRole('heading', { name: /place order/i })).toBeInTheDocument()
 })
 
-test.skip('modal closes and navigates away on successful booking', async () => {
-  // Skipped: race between dialog disappearing and route rendering — needs investigation
+test('modal closes and navigates away on successful booking', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(eventRes)
+    .mockResolvedValueOnce(mockOrder401)
+    .mockResolvedValueOnce({ ok: true, status: 201, json: () => Promise.resolve(mockOrder) } as Response)
+
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  await fillAndSubmitModal()
+
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('Order confirmed')).toBeInTheDocument()
+  })
 })
 
 // ── Card pre-fill (logged-in user) ─────────────────────────────────────────────
