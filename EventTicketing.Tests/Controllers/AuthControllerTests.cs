@@ -69,6 +69,20 @@ public class AuthControllerTests : IDisposable
         return user;
     }
 
+    private void SeedCard(int userId, string last4, bool isDefault)
+    {
+        _db.Cards.Add(new Card
+        {
+            UserId          = userId,
+            Last4           = last4,
+            EncryptedNumber = "dummy",
+            ExpiryDate      = "12/32",
+            CardType        = "Visa",
+            IsDefault       = isDefault,
+        });
+        _db.SaveChanges();
+    }
+
     // ── Login success ──────────────────────────────────────────────────────────
 
     [Fact]
@@ -196,6 +210,50 @@ public class AuthControllerTests : IDisposable
         var result = _controller.Me();
 
         Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    // ── /me/cards/default ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetMyDefaultCard_WithDefaultCard_ReturnsCard()
+    {
+        var seeded = SeedUser();
+        SeedCard(seeded.Id, last4: "4242", isDefault: true);
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(seeded);
+
+        var result = await _controller.GetMyDefaultCard();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var card = Assert.IsType<AuthController.DefaultCard>(ok.Value);
+        Assert.Equal("4242", card.Last4);
+        Assert.Equal("Visa", card.CardType);
+        Assert.Equal("12/32", card.ExpiryDate);
+    }
+
+    [Fact]
+    public async Task GetMyDefaultCard_WithNoCards_Returns404()
+    {
+        var seeded = SeedUser();
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(seeded);
+
+        var result = await _controller.GetMyDefaultCard();
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetMyDefaultCard_ReturnsOnlyDefaultCard()
+    {
+        var seeded = SeedUser();
+        SeedCard(seeded.Id, last4: "1111", isDefault: false);
+        SeedCard(seeded.Id, last4: "4242", isDefault: true);
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(seeded);
+
+        var result = await _controller.GetMyDefaultCard();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var card = Assert.IsType<AuthController.DefaultCard>(ok.Value);
+        Assert.Equal("4242", card.Last4);
     }
 
     // ── /logout ───────────────────────────────────────────────────────────────

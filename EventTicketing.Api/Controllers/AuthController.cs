@@ -67,6 +67,22 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         return Ok(new UserInfo(int.Parse(idClaim), nameClaim, emailClaim, roleClaim));
     }
 
+    public record DefaultCard(string Last4, string CardType, string ExpiryDate);
+
+    [Authorize]
+    [HttpGet("me/cards/default")]
+    public async Task<ActionResult<DefaultCard>> GetMyDefaultCard()
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var card = await db.Cards
+            .Where(c => c.UserId == userId && c.IsDefault)
+            .Select(c => new DefaultCard(c.Last4, c.CardType, c.ExpiryDate))
+            .FirstOrDefaultAsync();
+
+        if (card is null) return NotFound();
+        return Ok(card);
+    }
+
     [HttpPost("logout")]
     public IActionResult Logout()
     {

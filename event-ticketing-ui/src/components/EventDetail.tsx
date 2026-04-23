@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import BookingModal from './BookingModal'
+import { useAuth } from '../context/AuthContext'
 
 type Event = {
   id: number
@@ -22,12 +23,14 @@ type User = {
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
   const [userData, setUserDate] = useState<User | null>(null)
+  const [defaultCardLast4, setDefaultCardLast4] = useState<string | undefined>()
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
@@ -41,6 +44,16 @@ export default function EventDetail() {
       })
       .catch(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/auth/me/cards/default')
+      .then(res => (res.ok ? res.json() : null))
+      .then((card: { last4: string } | null) => {
+        if (card) setDefaultCardLast4(card.last4)
+      })
+      .catch(() => {})
+  }, [user])
 
   useEffect(() => {
     document.title = event ? `${event.title} | Ticketing` : `Ticketing`
@@ -121,8 +134,8 @@ export default function EventDetail() {
           eventDate={event.date}
           eventVenue={event.venue}
           price={event.price}
-          savedEmail={userData?.email}
-          savedCardLast4={userData?.cardLast4}
+          savedEmail={userData?.email ?? user?.email}
+          savedCardLast4={userData?.cardLast4 ?? defaultCardLast4}
           onConfirm={handleConfirmBooking}
           onClose={() => { setModalOpen(false); setBookingError(null) }}
           error={bookingError}
