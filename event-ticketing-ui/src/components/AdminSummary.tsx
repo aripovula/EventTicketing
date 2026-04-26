@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useBookingUpdates } from '../hooks/useBookingUpdates'
 
 type EventSummary = {
   eventId: number
@@ -16,7 +17,7 @@ export default function AdminSummary() {
   const [error, setError] = useState(false)
   const [asOf, setAsOf] = useState<Date | null>(null)
 
-  useEffect(() => {
+  const fetchSummary = useCallback(() => {
     fetch('/api/admin/summary')
       .then(res => {
         if (!res.ok) throw new Error()
@@ -25,6 +26,10 @@ export default function AdminSummary() {
       .then((data: EventSummary[]) => { setRows(data); setAsOf(new Date()); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })
   }, [])
+
+  useEffect(() => { fetchSummary() }, [fetchSummary])
+
+  useBookingUpdates(fetchSummary)
 
   return (
     <div>

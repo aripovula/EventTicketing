@@ -3,6 +3,20 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import AdminSummary from './AdminSummary'
 
+vi.mock('@microsoft/signalr', () => ({
+  HubConnectionBuilder: function () {
+    return {
+      withUrl:               function () { return this },
+      withAutomaticReconnect: function () { return this },
+      configureLogging:      function () { return this },
+      build: function () {
+        return { on: function () {}, start: function () { return Promise.resolve() }, stop: function () { return Promise.resolve() } }
+      },
+    }
+  },
+  LogLevel: { Warning: 2 },
+}))
+
 const mockRows = [
   { eventId: 2, title: 'Tech Conference 2026', openingBalance: 500, soldSeats: 3, remainingSeats: 497, revenue: 447 },
   { eventId: 1, title: 'Jazz Night', openingBalance: 100, soldSeats: 10, remainingSeats: 90, revenue: 250 },

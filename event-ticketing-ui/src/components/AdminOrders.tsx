@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useBookingUpdates } from '../hooks/useBookingUpdates'
 
 type Order = {
   id: number
@@ -15,7 +16,7 @@ export default function AdminOrders() {
   const [error, setError] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState('')
 
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     fetch('/api/admin/orders')
       .then(res => {
         if (!res.ok) throw new Error()
@@ -24,6 +25,10 @@ export default function AdminOrders() {
       .then((data: Order[]) => { setOrders(data); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })
   }, [])
+
+  useEffect(() => { fetchOrders() }, [fetchOrders])
+
+  useBookingUpdates(fetchOrders)
 
   const eventTitles = Array.from(new Set(orders.map(o => o.event?.title ?? '').filter(Boolean))).sort()
   const filtered = selectedEvent ? orders.filter(o => o.event?.title === selectedEvent) : orders

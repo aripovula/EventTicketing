@@ -3,6 +3,20 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import AdminOrders from './AdminOrders'
 
+vi.mock('@microsoft/signalr', () => ({
+  HubConnectionBuilder: function () {
+    return {
+      withUrl:               function () { return this },
+      withAutomaticReconnect: function () { return this },
+      configureLogging:      function () { return this },
+      build: function () {
+        return { on: function () {}, start: function () { return Promise.resolve() }, stop: function () { return Promise.resolve() } }
+      },
+    }
+  },
+  LogLevel: { Warning: 2 },
+}))
+
 const mockOrders = [
   {
     id: 10,
