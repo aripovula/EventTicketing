@@ -1,14 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using EventTicketing.Api.Data;
+using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext db) : ControllerBase
+public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Event>>> GetAll()
@@ -89,6 +91,8 @@ public class EventsController(AppDbContext db) : ControllerBase
         {
             return Conflict();
         }
+
+        await hub.Clients.All.SendAsync("BookingMade", id);
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
     }
 

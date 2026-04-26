@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
+using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +15,7 @@ public class EventsControllerTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _db;
     private readonly EventsController _controller;
+    private readonly FakeHubContext _hub;
 
     public EventsControllerTests()
     {
@@ -26,7 +29,8 @@ public class EventsControllerTests : IDisposable
         _db = new AppDbContext(options);
         _db.Database.EnsureCreated(); // creates schema and applies HasData seeds (Id 1 & 2)
 
-        _controller = new EventsController(_db);
+        _hub = new FakeHubContext();
+        _controller = new EventsController(_db, _hub);
     }
 
     public void Dispose()
@@ -472,5 +476,61 @@ public class EventsControllerTests : IDisposable
         var results = ValidateModel(req);
 
         Assert.Contains(results, r => r.MemberNames.Contains("Email"));
+    }
+
+    [Fact]
+    public async Task Book_BroadcastsBookingMadeWithEventId()
+    {
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Single(_hub.SentMessages);
+        Assert.Equal("BookingMade", _hub.SentMessages[0].Method);
+        Assert.Equal(1, _hub.SentMessages[0].Args[0]);
+    }
+
+    [Fact]
+    public async Task Book_SoldOut_DoesNotBroadcast()
+    {
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 0;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Empty(_hub.SentMessages);
+    }
+}
+
+// ── SignalR hub stub ──────────────────────────────────────────────────────────
+
+internal sealed class FakeHubContext : IHubContext<TicketingHub>
+{
+    public record SentMessage(string Method, object?[] Args);
+    public List<SentMessage> SentMessages { get; } = [];
+
+    public IHubClients Clients => new FakeHubClients(SentMessages);
+    public IGroupManager Groups => throw new NotImplementedException();
+}
+
+internal sealed class FakeHubClients(List<FakeHubContext.SentMessage> messages) : IHubClients
+{
+    public IClientProxy All => new FakeClientProxy(messages);
+    public IClientProxy AllExcept(IReadOnlyList<string> excludedIds) => new FakeClientProxy(messages);
+    public IClientProxy Client(string connectionId) => new FakeClientProxy(messages);
+    public IClientProxy Clients(IReadOnlyList<string> connectionIds) => new FakeClientProxy(messages);
+    public IClientProxy Group(string groupName) => new FakeClientProxy(messages);
+    public IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedIds) => new FakeClientProxy(messages);
+    public IClientProxy Groups(IReadOnlyList<string> groupNames) => new FakeClientProxy(messages);
+    public IClientProxy User(string userId) => new FakeClientProxy(messages);
+    public IClientProxy Users(IReadOnlyList<string> userIds) => new FakeClientProxy(messages);
+}
+
+internal sealed class FakeClientProxy(List<FakeHubContext.SentMessage> messages) : IClientProxy
+{
+    public Task SendCoreAsync(string method, object?[] args, CancellationToken ct = default)
+    {
+        messages.Add(new(method, args));
+        return Task.CompletedTask;
     }
 }
