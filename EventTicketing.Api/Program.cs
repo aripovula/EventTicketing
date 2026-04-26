@@ -1,5 +1,6 @@
 using System.Text;
 using EventTicketing.Api.Data;
+using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -54,5 +56,6 @@ using (var scope = app.Services.CreateScope())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<TicketingHub>("/hubs/ticketing");
 
 app.Run();
