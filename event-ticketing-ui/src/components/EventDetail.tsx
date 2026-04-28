@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import BookingModal from './BookingModal'
 import { useAuth } from '../context/AuthContext'
-import { useBookingUpdates } from '../hooks/useBookingUpdates'
+import { useHubEvents } from '../hooks/useHubEvents'
 
 type Event = {
   id: number
@@ -48,8 +48,10 @@ export default function EventDetail() {
 
   useEffect(() => { fetchEvent() }, [fetchEvent])
 
-  useBookingUpdates((bookedEventId) => {
-    if (bookedEventId === Number(id)) fetchEvent()
+  useHubEvents({
+    BookingMade: (bookedEventId: unknown) => {
+      if (bookedEventId === Number(id)) fetchEvent()
+    },
   })
 
   useEffect(() => {

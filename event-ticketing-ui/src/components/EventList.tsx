@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBookingUpdates } from '../hooks/useBookingUpdates'
+import { useHubEvents } from '../hooks/useHubEvents'
 
 type Event = {
   id: number
@@ -29,7 +29,7 @@ export default function EventList() {
 
   useEffect(() => { fetchEvents() }, [fetchEvents])
 
-  useBookingUpdates(fetchEvents)
+  useHubEvents({ BookingMade: fetchEvents, EventCreated: fetchEvents })
 
   const sortEvents = (a: Event, b: Event) => {
     if (sortType == 'name') return a.title.localeCompare(b.title)

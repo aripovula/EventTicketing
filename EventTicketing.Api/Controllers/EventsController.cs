@@ -31,6 +31,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
     {
         db.Events.Add(ev);
         await db.SaveChangesAsync();
+        await hub.Clients.All.SendAsync("EventCreated", ev.Id);
         return CreatedAtAction(nameof(GetById), new { id = ev.Id }, ev);
     }
 

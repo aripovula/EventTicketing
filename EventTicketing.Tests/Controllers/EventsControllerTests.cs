@@ -104,6 +104,29 @@ public class EventsControllerTests : IDisposable
         Assert.Equal(3, await _db.Events.CountAsync());
     }
 
+    [Fact]
+    public async Task Create_BroadcastsEventCreatedWithNewEventId()
+    {
+        var newEvent = new Event { Title = "New Show", Description = "Desc.", Date = new DateTime(2026, 9, 1), Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
+
+        await _controller.Create(newEvent);
+
+        Assert.Single(_hub.SentMessages);
+        Assert.Equal("EventCreated", _hub.SentMessages[0].Method);
+        Assert.Equal(newEvent.Id, _hub.SentMessages[0].Args[0]);
+    }
+
+    [Fact]
+    public async Task Create_BroadcastsAfterPersist()
+    {
+        var newEvent = new Event { Title = "New Show", Description = "Desc.", Date = new DateTime(2026, 9, 1), Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
+
+        await _controller.Create(newEvent);
+
+        // Broadcast uses the DB-assigned Id (> 0), not the default 0
+        Assert.True((int)_hub.SentMessages[0].Args[0]! > 0);
+    }
+
     // PUT /api/events/{id}
 
     [Fact]
