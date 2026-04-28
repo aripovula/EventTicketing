@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBookingUpdates } from '../hooks/useBookingUpdates'
+import { useHubEvents } from '../hooks/useHubEvents'
 
 type Order = {
   id: number
@@ -28,7 +28,7 @@ export default function AdminOrders() {
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
 
-  useBookingUpdates(fetchOrders)
+  useHubEvents({ BookingMade: fetchOrders })
 
   const eventTitles = Array.from(new Set(orders.map(o => o.event?.title ?? '').filter(Boolean))).sort()
   const filtered = selectedEvent ? orders.filter(o => o.event?.title === selectedEvent) : orders

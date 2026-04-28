@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBookingUpdates } from '../hooks/useBookingUpdates'
+import { useHubEvents } from '../hooks/useHubEvents'
 
 type EventSummary = {
   eventId: number
@@ -29,7 +29,7 @@ export default function AdminSummary() {
 
   useEffect(() => { fetchSummary() }, [fetchSummary])
 
-  useBookingUpdates(fetchSummary)
+  useHubEvents({ BookingMade: fetchSummary })
 
   return (
     <div>
