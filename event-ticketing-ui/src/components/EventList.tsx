@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useBookingUpdates } from '../hooks/useBookingUpdates'
 
 type Event = {
   id: number
@@ -20,24 +21,15 @@ export default function EventList() {
   const [sortType, setSortType] = useState<'name' | 'date' | 'price'>('name')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  const fetchEvents = useCallback(() => {
     fetch('/api/events')
       .then(res => res.json())
-      .then((data: Event[]) => {
-        setEvents(data)
-        setLoading(false)
-      })
+      .then((data: Event[]) => { setEvents(data); setLoading(false) })
   }, [])
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      fetch('/api/events')
-        .then(res => res.json())
-        .then((data: Event[]) => {
-          setEvents(data)})
-        }, 30_000)
-    return () => clearInterval(intervalId)
-  }, [])
+  useEffect(() => { fetchEvents() }, [fetchEvents])
+
+  useBookingUpdates(fetchEvents)
 
   const sortEvents = (a: Event, b: Event) => {
     if (sortType == 'name') return a.title.localeCompare(b.title)

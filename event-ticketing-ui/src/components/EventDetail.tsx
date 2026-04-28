@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import BookingModal from './BookingModal'
 import { useAuth } from '../context/AuthContext'
+import { useBookingUpdates } from '../hooks/useBookingUpdates'
 
 type Event = {
   id: number
@@ -32,7 +33,7 @@ export default function EventDetail() {
   const [userData, setUserDate] = useState<User | null>(null)
   const [defaultCardLast4, setDefaultCardLast4] = useState<string | undefined>()
 
-  useEffect(() => {
+  const fetchEvent = useCallback(() => {
     fetch(`/api/events/${id}`)
       .then(res => {
         if (res.status === 404) { setNotFound(true); return null }
@@ -44,6 +45,12 @@ export default function EventDetail() {
       })
       .catch(() => setLoading(false))
   }, [id])
+
+  useEffect(() => { fetchEvent() }, [fetchEvent])
+
+  useBookingUpdates((bookedEventId) => {
+    if (bookedEventId === Number(id)) fetchEvent()
+  })
 
   useEffect(() => {
     if (!user) return

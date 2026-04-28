@@ -5,6 +5,20 @@ import { vi } from 'vitest'
 import EventDetail from './EventDetail'
 import { AuthProvider } from '../context/AuthContext'
 
+vi.mock('@microsoft/signalr', () => ({
+  HubConnectionBuilder: function () {
+    return {
+      withUrl:               function () { return this },
+      withAutomaticReconnect: function () { return this },
+      configureLogging:      function () { return this },
+      build: function () {
+        return { on: function () {}, start: function () { return Promise.resolve() }, stop: function () { return Promise.resolve() } }
+      },
+    }
+  },
+  LogLevel: { Warning: 2 },
+}))
+
 const mockEvent = {
   id: 1,
   title: 'Jazz Night',
