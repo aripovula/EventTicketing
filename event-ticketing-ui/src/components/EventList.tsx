@@ -29,7 +29,7 @@ export default function EventList() {
 
   useEffect(() => { fetchEvents() }, [fetchEvents])
 
-  useHubEvents({ BookingMade: fetchEvents, EventCreated: fetchEvents })
+  useHubEvents({ BookingMade: fetchEvents, EventCreated: fetchEvents, EventUpdated: fetchEvents, EventDeleted: fetchEvents })
 
   const sortEvents = (a: Event, b: Event) => {
     if (sortType == 'name') return a.title.localeCompare(b.title)

@@ -49,6 +49,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         ev.AvailableSeats = incoming.AvailableSeats;
         ev.Price = incoming.Price;
         await db.SaveChangesAsync();
+        await hub.Clients.All.SendAsync("EventUpdated", id);
         return NoContent();
     }
 
@@ -59,6 +60,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         if (ev is null) return NotFound();
         db.Events.Remove(ev);
         await db.SaveChangesAsync();
+        await hub.Clients.All.SendAsync("EventDeleted", id);
         return NoContent();
     }
 

@@ -171,6 +171,28 @@ public class EventsControllerTests : IDisposable
         Assert.IsType<NotFoundResult>(result);
     }
 
+    [Fact]
+    public async Task Update_BroadcastsEventUpdatedWithEventId()
+    {
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", Date = new DateTime(2026, 8, 15, 20, 0, 0), Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+
+        await _controller.Update(1, updated);
+
+        Assert.Single(_hub.SentMessages);
+        Assert.Equal("EventUpdated", _hub.SentMessages[0].Method);
+        Assert.Equal(1, _hub.SentMessages[0].Args[0]);
+    }
+
+    [Fact]
+    public async Task Update_NotFound_DoesNotBroadcast()
+    {
+        var updated = new Event { Id = 999, Title = "Ghost", Description = ".", Date = DateTime.Now, Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
+
+        await _controller.Update(999, updated);
+
+        Assert.Empty(_hub.SentMessages);
+    }
+
     // DELETE /api/events/{id}
 
     [Fact]
@@ -196,6 +218,24 @@ public class EventsControllerTests : IDisposable
         var result = await _controller.Delete(999);
 
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_BroadcastsEventDeletedWithEventId()
+    {
+        await _controller.Delete(1);
+
+        Assert.Single(_hub.SentMessages);
+        Assert.Equal("EventDeleted", _hub.SentMessages[0].Method);
+        Assert.Equal(1, _hub.SentMessages[0].Args[0]);
+    }
+
+    [Fact]
+    public async Task Delete_NotFound_DoesNotBroadcast()
+    {
+        await _controller.Delete(999);
+
+        Assert.Empty(_hub.SentMessages);
     }
 
     // POST /api/events/{id}/book

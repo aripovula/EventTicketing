@@ -52,6 +52,12 @@ export default function EventDetail() {
     BookingMade: (bookedEventId: unknown) => {
       if (bookedEventId === Number(id)) fetchEvent()
     },
+    EventUpdated: (updatedEventId: unknown) => {
+      if (updatedEventId === Number(id)) fetchEvent()
+    },
+    EventDeleted: (deletedEventId: unknown) => {
+      if (deletedEventId === Number(id)) navigate('/')
+    },
   })
 
   useEffect(() => {
