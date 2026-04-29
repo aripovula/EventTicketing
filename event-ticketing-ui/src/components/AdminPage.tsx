@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import ConfirmDialog from './ConfirmDialog'
 
 type Event = {
   id: number
@@ -10,6 +11,7 @@ type Event = {
 export default function AdminPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/events')
@@ -17,10 +19,14 @@ export default function AdminPage() {
       .then((data: Event[]) => { setEvents(data); setLoading(false) })
   }, [])
 
-  const handleDelete = async (id: number) => {
-    await fetch(`/api/events/${id}`, { method: 'DELETE' })
-    setEvents(prev => prev.filter(ev => ev.id !== id))
+  const handleDeleteConfirmed = async () => {
+    if (confirmDeleteId === null) return
+    await fetch(`/api/events/${confirmDeleteId}`, { method: 'DELETE' })
+    setEvents(prev => prev.filter(ev => ev.id !== confirmDeleteId))
+    setConfirmDeleteId(null)
   }
+
+  const confirmingEvent = events.find(ev => ev.id === confirmDeleteId)
 
   return (
     <div>
@@ -67,7 +73,7 @@ export default function AdminPage() {
                     Edit
                   </Link>
                   <button
-                    onClick={() => handleDelete(ev.id)}
+                    onClick={() => setConfirmDeleteId(ev.id)}
                     className="text-sm border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
                   >
                     Delete
@@ -77,6 +83,16 @@ export default function AdminPage() {
             ))}
           </ul>
         </div>
+      )}
+
+      {confirmDeleteId !== null && (
+        <ConfirmDialog
+          title="Delete event?"
+          message={<>Are you sure you want to delete <span className="font-medium text-gray-900">"{confirmingEvent?.title}"</span>? This cannot be undone.</>}
+          confirmLabel="Delete"
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </div>
   )

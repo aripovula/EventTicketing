@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import AdminPage from './AdminPage'
@@ -57,19 +57,47 @@ test('New event link points to /admin/new', async () => {
   expect(screen.getByRole('link', { name: /new event/i })).toHaveAttribute('href', '/admin/new')
 })
 
-test('clicking delete calls DELETE and removes event from list', async () => {
+test('clicking Delete opens a confirmation dialog', async () => {
   const user = userEvent.setup()
-  vi.mocked(fetch)
-    .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvents) } as Response)
-    .mockResolvedValueOnce({ json: () => Promise.resolve({}) } as Response)
-
   renderAdminPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.click(screen.getAllByRole('button', { name: /delete/i })[0])
 
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(screen.getByText(/are you sure you want to delete/i)).toBeInTheDocument()
+  expect(screen.getByText(/"Jazz Night"/)).toBeInTheDocument()
+})
+
+test('Cancel in confirmation dialog closes it without deleting', async () => {
+  const user = userEvent.setup()
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.click(screen.getAllByRole('button', { name: /delete/i })[0])
+  await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByText('Jazz Night')).toBeInTheDocument()
+  const deleteCall = vi.mocked(fetch).mock.calls.find(([, opts]) => opts?.method === 'DELETE')
+  expect(deleteCall).toBeUndefined()
+})
+
+test('confirming deletion calls DELETE and removes event from list', async () => {
+  const user = userEvent.setup()
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvents) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) } as Response)
+
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.click(screen.getAllByRole('button', { name: /delete/i })[0])
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^delete$/i }))
+
   const deleteCall = vi.mocked(fetch).mock.calls.find(([, opts]) => opts?.method === 'DELETE')
   expect(deleteCall).toBeDefined()
   expect(deleteCall![0]).toBe('/api/events/1')
   await waitFor(() => expect(screen.queryByText('Jazz Night')).not.toBeInTheDocument())
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
