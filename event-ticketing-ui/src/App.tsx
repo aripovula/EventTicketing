@@ -3,12 +3,14 @@ import EventList from './components/EventList'
 import EventDetail from './components/EventDetail'
 import AdminPage from './components/AdminPage'
 import AdminEventForm from './components/AdminEventForm'
+import AdminCalendarPage from './components/AdminCalendarPage'
 import OrderConfirmation from './components/OrderConfirmation'
 import OrdersList from './components/OrdersList'
 import AdminOrders from './components/AdminOrders'
 import AdminSummary from './components/AdminSummary'
 import LoginPage from './components/LoginPage'
 import ProfilePage from './components/ProfilePage'
+import MyCalendarPage from './components/MyCalendarPage'
 import RequireAdmin from './components/RequireAdmin'
 import { useAuth } from './context/AuthContext'
 
@@ -24,6 +26,9 @@ function HeaderNav() {
   if (user) {
     return (
       <nav className="flex items-center gap-4">
+        <Link to="/calendar" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
+          My Calendar
+        </Link>
         <Link to="/orders" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
           My orders
         </Link>
@@ -75,8 +80,10 @@ function App() {
             <Route path="/orders/:id" element={<OrderConfirmation />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/calendar" element={<MyCalendarPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/calendar" element={<AdminCalendarPage />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/summary" element={<AdminSummary />} />
               <Route path="/admin/new" element={<AdminEventForm />} />
