@@ -38,7 +38,7 @@ export default function AdminOrders() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 m-0">All orders</h1>
-        <Link to="/admin" className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors no-underline">
+        <Link to="/admin" className="text-sm text-cyan-600 hover:text-cyan-800 transition-colors no-underline">
           ← Back to admin
         </Link>
       </div>
@@ -57,7 +57,7 @@ export default function AdminOrders() {
               aria-label="Filter by event"
               value={selectedEvent}
               onChange={e => setSelectedEvent(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
             >
               <option value="">All events</option>
               {eventTitles.map(title => (
@@ -85,7 +85,7 @@ export default function AdminOrders() {
                     <td className="px-6 py-4 font-medium text-gray-900">{order.event?.title ?? '—'}</td>
                     <td className="px-6 py-4 text-gray-700">{order.userId}</td>
                     <td className="px-6 py-4 text-gray-700">{order.email}</td>
-                    <td className="px-6 py-4 text-right text-indigo-600 font-medium">${order.price}</td>
+                    <td className="px-6 py-4 text-right text-cyan-600 font-medium">${order.price}</td>
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(order.bookedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                     </td>

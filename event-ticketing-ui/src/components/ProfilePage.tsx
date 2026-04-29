@@ -112,7 +112,7 @@ export default function ProfilePage() {
               onChange={e => setCardNumber(e.target.value.replace(/\D/g, ''))}
               required
               maxLength={19}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
             />
           </div>
 
@@ -125,7 +125,7 @@ export default function ProfilePage() {
                 id="cardType"
                 value={cardType}
                 onChange={e => setCardType(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
               >
                 <option>Visa</option>
                 <option>Mastercard</option>
@@ -146,7 +146,7 @@ export default function ProfilePage() {
                 onChange={e => setExpiryDate(e.target.value)}
                 required
                 maxLength={5}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
               />
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="bg-cyan-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-cyan-700 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving…' : card ? 'Update card' : 'Save card'}
           </button>

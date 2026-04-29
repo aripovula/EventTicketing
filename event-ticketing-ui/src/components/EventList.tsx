@@ -60,12 +60,12 @@ export default function EventList() {
           onBlur={() => changeInputSize(200, 12)}
           placeholder="type search term"
           style={{ width: '200px', fontSize: '12px' }}
-          className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          className="rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
         />
         <select
           value={sortType}
           onChange={e => setSortType(e.target.value as 'name' | 'date' | 'price')}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
         >
           <option value="name">Sort by name</option>
           <option value="date">Sort by date</option>
@@ -86,7 +86,7 @@ export default function EventList() {
             <div className="flex flex-col justify-between p-5 flex-1 min-w-0">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-1 mt-0">
-                  <Link to={`/events/${event.id}`} className="hover:text-indigo-600 transition-colors no-underline">
+                  <Link to={`/events/${event.id}`} className="hover:text-cyan-600 transition-colors no-underline">
                     {event.title}
                   </Link>
                 </h2>
@@ -97,10 +97,10 @@ export default function EventList() {
               <div className="flex items-end justify-between">
                 <p className="text-sm text-gray-400">{event.availableSeats} seats available</p>
                 <div className="text-right shrink-0">
-                  <span className="text-xl font-bold text-indigo-600">${event.price}</span>
+                  <span className="text-xl font-bold text-cyan-600">${event.price}</span>
                   <Link
                     to={`/events/${event.id}`}
-                    className="block mt-2 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 transition-colors no-underline"
+                    className="block mt-2 text-sm bg-cyan-600 text-white rounded-lg px-4 py-2 hover:bg-cyan-700 transition-colors no-underline"
                   >
                     View →
                   </Link>

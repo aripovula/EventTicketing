@@ -35,7 +35,7 @@ export default function AdminSummary() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 m-0">Seat summary</h1>
-        <Link to="/admin" className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors no-underline">
+        <Link to="/admin" className="text-sm text-cyan-600 hover:text-cyan-800 transition-colors no-underline">
           ← Back to admin
         </Link>
       </div>
@@ -67,7 +67,7 @@ export default function AdminSummary() {
                 <tr key={row.eventId} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{row.title}</td>
                   <td className="px-6 py-4 text-right text-gray-700">{row.openingBalance}</td>
-                  <td className="px-6 py-4 text-right text-indigo-600 font-medium">{row.soldSeats}</td>
+                  <td className="px-6 py-4 text-right text-cyan-600 font-medium">{row.soldSeats}</td>
                   <td className="px-6 py-4 text-right text-gray-700">{row.remainingSeats}</td>
                   <td className="px-6 py-4 text-right font-medium text-green-600">${row.revenue.toLocaleString()}</td>
                 </tr>

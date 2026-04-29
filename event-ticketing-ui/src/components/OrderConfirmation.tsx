@@ -64,7 +64,7 @@ export default function OrderConfirmation() {
       </div>
 
       <div className="mt-6 text-center">
-        <Link to="/" className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors no-underline">
+        <Link to="/" className="text-sm text-cyan-600 hover:text-cyan-800 transition-colors no-underline">
           ← Browse more events
         </Link>
       </div>

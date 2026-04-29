@@ -23,7 +23,7 @@ const emptyForm: EventFormData = {
   imageUrl: '',
 }
 
-const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
 const labelClass = "block text-sm font-medium text-gray-700 mb-1"
 
 export default function AdminEventForm() {
@@ -85,7 +85,7 @@ export default function AdminEventForm() {
 
   return (
     <div>
-      <Link to="/admin" className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors no-underline">
+      <Link to="/admin" className="text-sm text-cyan-600 hover:text-cyan-800 transition-colors no-underline">
         ← Back to admin
       </Link>
 
@@ -140,7 +140,7 @@ export default function AdminEventForm() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+            <button type="submit" className="bg-cyan-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors">
               {isEdit ? 'Save changes' : 'Create event'}
             </button>
             <Link to="/admin" className="border border-gray-300 text-gray-600 px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors no-underline">

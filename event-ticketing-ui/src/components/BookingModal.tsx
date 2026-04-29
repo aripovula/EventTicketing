@@ -12,7 +12,7 @@ type Props = {
   error: string | null
 }
 
-const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
 const labelClass = "block text-sm font-medium text-gray-700 mb-1"
 
 export default function BookingModal({ eventTitle, eventDate, eventVenue, price, savedEmail, savedCardLast4, onConfirm, onClose, error }: Props) {
@@ -146,7 +146,7 @@ export default function BookingModal({ eventTitle, eventDate, eventVenue, price,
             <button
               type="submit"
               disabled={submitting}
-              className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="bg-cyan-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {submitting ? 'Placing order…' : 'Place order'}
             </button>

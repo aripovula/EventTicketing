@@ -67,12 +67,12 @@ export default function OrdersList() {
             required
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           <button
             type="submit"
             disabled={loading}
-            className="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-cyan-700 disabled:opacity-50"
           >
             {loading ? 'Looking up…' : 'Look up'}
           </button>
@@ -106,7 +106,7 @@ export default function OrdersList() {
               </p>
               <Link
                 to={`/orders/${order.id}`}
-                className="text-xs text-indigo-600 hover:text-indigo-800 transition-colors no-underline mt-2 inline-block"
+                className="text-xs text-cyan-600 hover:text-cyan-800 transition-colors no-underline mt-2 inline-block"
               >
                 View confirmation →
               </Link>

@@ -12,7 +12,7 @@ const ADMIN = { label: 'Admin', email: 'admin@example.com' }
 const PASSWORD = 'Password'
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition'
+  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 transition'
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface PanelProps {
@@ -23,15 +23,15 @@ interface PanelProps {
   error: string | null
   submitting: boolean
   onSubmit: (e: React.FormEvent) => void
-  accent: 'gray' | 'indigo'
+  accent: 'gray' | 'cyan'
 }
 
 function Panel({ title, options, selectedEmail, onSelect, error, submitting, onSubmit, accent }: PanelProps) {
-  const borderClass = accent === 'indigo'
-    ? 'border-indigo-200 bg-indigo-50'
+  const borderClass = accent === 'cyan'
+    ? 'border-cyan-200 bg-cyan-50'
     : 'border-gray-200 bg-white'
-  const buttonClass = accent === 'indigo'
-    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+  const buttonClass = accent === 'cyan'
+    ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
     : 'bg-gray-800 hover:bg-gray-900 text-white'
 
   return (
@@ -52,7 +52,7 @@ function Panel({ title, options, selectedEmail, onSelect, error, submitting, onS
                 value={opt.email}
                 checked={selectedEmail === opt.email}
                 onChange={() => onSelect(opt.email)}
-                className="accent-indigo-600"
+                className="accent-cyan-600"
               />
               <span className="font-medium">{opt.label}</span>
               <span className="text-gray-400">{opt.email}</span>
@@ -160,7 +160,7 @@ export default function LoginPage() {
             error={adminError}
             submitting={adminBusy}
             onSubmit={e => { e.preventDefault(); handleLogin(adminEmail, setAdminError, setAdminBusy) }}
-            accent="indigo"
+            accent="cyan"
           />
         </div>
       </div>

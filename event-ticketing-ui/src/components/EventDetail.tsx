@@ -102,7 +102,7 @@ export default function EventDetail() {
 
   return (
     <div>
-      <Link to="/" className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors no-underline">
+      <Link to="/" className="text-sm text-cyan-600 hover:text-cyan-800 transition-colors no-underline">
         ← Back to events
       </Link>
 
@@ -124,7 +124,7 @@ export default function EventDetail() {
 
         <div className="flex items-center justify-between border-t border-gray-100 pt-5">
           <div>
-            <span className="text-3xl font-bold text-indigo-600">${event.price}</span>
+            <span className="text-3xl font-bold text-cyan-600">${event.price}</span>
             <p className="text-sm mt-1 text-gray-500">
               {soldOut
                 ? <span className="text-red-500 font-medium">Sold out</span>
@@ -135,7 +135,7 @@ export default function EventDetail() {
           <button
             onClick={() => setModalOpen(true)}
             disabled={soldOut}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="bg-cyan-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-cyan-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {soldOut ? 'Sold out' : 'Buy ticket'}
           </button>

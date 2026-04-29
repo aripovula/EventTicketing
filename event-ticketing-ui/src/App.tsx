@@ -24,14 +24,14 @@ function HeaderNav() {
   if (user) {
     return (
       <nav className="flex items-center gap-4">
-        <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+        <Link to="/orders" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
           My orders
         </Link>
-        <Link to="/profile" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+        <Link to="/profile" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
           Profile
         </Link>
         {user.role === 'admin' && (
-          <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+          <Link to="/admin" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
             Admin
           </Link>
         )}
@@ -47,10 +47,10 @@ function HeaderNav() {
 
   return (
     <nav className="flex items-center gap-4">
-      <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+      <Link to="/orders" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
         My orders
       </Link>
-      <Link to="/login" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+      <Link to="/login" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
         Sign in
       </Link>
     </nav>
@@ -62,7 +62,7 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50 text-gray-800">
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
+          <Link to="/" className="text-xl font-semibold text-gray-900 hover:text-cyan-600 transition-colors">
             🎟 Event Ticketing
           </Link>
           <HeaderNav />
