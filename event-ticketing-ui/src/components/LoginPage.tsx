@@ -137,15 +137,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 leading-relaxed">
-        <strong>Tip:</strong> Log in here as a regular user and open this app in another browser (or
-        incognito window) to log in as admin — or vice versa. That way you can see what the admin
-        panel reflects in real time based on a regular user's actions, and vice versa.{' '}
-        <span className="text-amber-600">
-          (Real-time push updates via SignalR are planned for a future step.)
-        </span>
-      </div>
-
       <div className="flex gap-6">
         <div className="w-[55%]">
           <Panel
@@ -172,6 +163,33 @@ export default function LoginPage() {
             accent="indigo"
           />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900 leading-relaxed">
+        <strong>Tip:</strong> Log in here as a regular user and open this app in another browser (or
+        incognito window) to log in as admin — or vice versa. That way you can see what the admin
+        panel reflects in real time based on a regular user's actions, and vice versa.{' '}
+        Real-time push updates are delivered via <strong>SignalR</strong> (WebSockets).
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-700 leading-relaxed space-y-2">
+        <p className="font-semibold text-gray-900">About this app</p>
+        <p>
+          A full-stack event ticketing demo built to explore the MVC pattern end-to-end.
+          The backend is <strong>ASP.NET Core 9</strong> (C#) following the MVC pattern, backed by{' '}
+          <strong>PostgreSQL</strong> with <strong>Entity Framework Core</strong> for data access and
+          migrations. Authentication uses <strong>JWT</strong> stored in HttpOnly cookies.
+        </p>
+        <p>
+          The frontend is <strong>React 18</strong> with <strong>TypeScript</strong>, built with Vite,
+          styled with Tailwind CSS, and tested with Vitest + Testing Library. Real-time seat and event
+          updates are pushed from the server using <strong>SignalR</strong> (WebSockets) via a shared
+          hub connection per page.
+        </p>
+        <p className="text-gray-500">
+          Backend tests: xUnit · Frontend tests: Vitest / React Testing Library ·
+          CI: GitHub Actions
+        </p>
       </div>
     </div>
   )

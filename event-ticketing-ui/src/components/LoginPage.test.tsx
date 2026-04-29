@@ -54,9 +54,18 @@ test('shows the dual-browser tip banner', () => {
   expect(screen.getByText(/log in here as a regular user/i)).toBeInTheDocument()
 })
 
-test('shows SignalR planned note in tip banner', () => {
+test('shows SignalR note in tip banner', () => {
   renderPage()
-  expect(screen.getByText(/signalr/i)).toBeInTheDocument()
+  expect(screen.getByText(/real-time push updates are delivered via/i)).toBeInTheDocument()
+})
+
+test('shows about section with key tech stack details', () => {
+  renderPage()
+  expect(screen.getByText(/about this app/i)).toBeInTheDocument()
+  expect(screen.getByText(/ASP\.NET Core 9/i)).toBeInTheDocument()
+  expect(screen.getByText(/PostgreSQL/i)).toBeInTheDocument()
+  expect(screen.getByText(/Entity Framework Core/i)).toBeInTheDocument()
+  expect(screen.getByText(/React 18/i)).toBeInTheDocument()
 })
 
 // ── Pre-fill behaviour ─────────────────────────────────────────────────────────
