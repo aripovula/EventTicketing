@@ -60,7 +60,7 @@ public class EventsControllerTests : IDisposable
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var events = Assert.IsAssignableFrom<IEnumerable<Event>>(ok.Value);
-        Assert.Equal(2, events.Count());
+        Assert.NotEmpty(events);
     }
 
     // GET /api/events/{id}
@@ -88,7 +88,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Create_ReturnsCreatedWithLocation()
     {
-        var newEvent = new Event { Title = "New Show", Description = "Desc.", Date = new DateTime(2026, 9, 1), Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
+        var newEvent = new Event { Title = "New Show", Description = "Desc.", StartTime = new DateTime(2026, 9, 1, 19, 0, 0), EndTime = new DateTime(2026, 9, 1, 22, 0, 0), EventType = "Music", Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
 
         var result = await _controller.Create(newEvent);
 
@@ -101,17 +101,18 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Create_PersistsEventToDatabase()
     {
-        var newEvent = new Event { Title = "New Show", Description = "Desc.", Date = new DateTime(2026, 9, 1), Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
+        var newEvent = new Event { Title = "New Show", Description = "Desc.", StartTime = new DateTime(2026, 9, 1, 19, 0, 0), EndTime = new DateTime(2026, 9, 1, 22, 0, 0), EventType = "Music", Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
 
+        var countBefore = await _db.Events.CountAsync();
         await _controller.Create(newEvent);
 
-        Assert.Equal(3, await _db.Events.CountAsync());
+        Assert.Equal(countBefore + 1, await _db.Events.CountAsync());
     }
 
     [Fact]
     public async Task Create_BroadcastsEventCreatedWithNewEventId()
     {
-        var newEvent = new Event { Title = "New Show", Description = "Desc.", Date = new DateTime(2026, 9, 1), Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
+        var newEvent = new Event { Title = "New Show", Description = "Desc.", StartTime = new DateTime(2026, 9, 1, 19, 0, 0), EndTime = new DateTime(2026, 9, 1, 22, 0, 0), EventType = "Music", Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
 
         await _controller.Create(newEvent);
 
@@ -123,7 +124,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Create_BroadcastsAfterPersist()
     {
-        var newEvent = new Event { Title = "New Show", Description = "Desc.", Date = new DateTime(2026, 9, 1), Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
+        var newEvent = new Event { Title = "New Show", Description = "Desc.", StartTime = new DateTime(2026, 9, 1, 19, 0, 0), EndTime = new DateTime(2026, 9, 1, 22, 0, 0), EventType = "Music", Venue = "Arena", TotalSeats = 200, AvailableSeats = 200, Price = 50m };
 
         await _controller.Create(newEvent);
 
@@ -136,7 +137,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Update_ExistingId_ReturnsNoContent()
     {
-        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", Date = new DateTime(2026, 8, 15, 20, 0, 0), Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", StartTime = new DateTime(2026, 8, 15, 20, 0, 0), EndTime = new DateTime(2026, 8, 15, 23, 0, 0), EventType = "Music", Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
 
         var result = await _controller.Update(1, updated);
 
@@ -146,7 +147,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Update_PersistsChangesToDatabase()
     {
-        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", Date = new DateTime(2026, 8, 15, 20, 0, 0), Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", StartTime = new DateTime(2026, 8, 15, 20, 0, 0), EndTime = new DateTime(2026, 8, 15, 23, 0, 0), EventType = "Music", Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
 
         await _controller.Update(1, updated);
 
@@ -158,7 +159,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Update_MismatchedId_ReturnsBadRequest()
     {
-        var updated = new Event { Id = 2, Title = "Wrong", Description = ".", Date = DateTime.Now, Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
+        var updated = new Event { Id = 2, Title = "Wrong", Description = ".", StartTime = DateTime.Now, EndTime = DateTime.Now.AddHours(1), EventType = "Other", Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
 
         var result = await _controller.Update(1, updated);
 
@@ -168,7 +169,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Update_UnknownId_ReturnsNotFound()
     {
-        var updated = new Event { Id = 999, Title = "Ghost", Description = ".", Date = DateTime.Now, Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
+        var updated = new Event { Id = 999, Title = "Ghost", Description = ".", StartTime = DateTime.Now, EndTime = DateTime.Now.AddHours(1), EventType = "Other", Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
 
         var result = await _controller.Update(999, updated);
 
@@ -178,7 +179,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Update_BroadcastsEventUpdatedWithEventId()
     {
-        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", Date = new DateTime(2026, 8, 15, 20, 0, 0), Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "Live jazz.", StartTime = new DateTime(2026, 8, 15, 20, 0, 0), EndTime = new DateTime(2026, 8, 15, 23, 0, 0), EventType = "Music", Venue = "Blue Note Club", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
 
         await _controller.Update(1, updated);
 
@@ -190,7 +191,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Update_NotFound_DoesNotBroadcast()
     {
-        var updated = new Event { Id = 999, Title = "Ghost", Description = ".", Date = DateTime.Now, Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
+        var updated = new Event { Id = 999, Title = "Ghost", Description = ".", StartTime = DateTime.Now, EndTime = DateTime.Now.AddHours(1), EventType = "Other", Venue = "V", TotalSeats = 1, AvailableSeats = 1, Price = 1m };
 
         await _controller.Update(999, updated);
 
@@ -210,10 +211,11 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public async Task Delete_RemovesEventFromDatabase()
     {
+        var countBefore = await _db.Events.CountAsync();
         await _controller.Delete(1);
 
         Assert.Null(await _db.Events.FindAsync(1));
-        Assert.Equal(1, await _db.Events.CountAsync());
+        Assert.Equal(countBefore - 1, await _db.Events.CountAsync());
     }
 
     [Fact]

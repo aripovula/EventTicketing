@@ -47,11 +47,14 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         if (ev is null) return NotFound();
         ev.Title = incoming.Title;
         ev.Description = incoming.Description;
-        ev.Date = incoming.Date;
+        ev.StartTime = incoming.StartTime;
+        ev.EndTime = incoming.EndTime;
         ev.Venue = incoming.Venue;
         ev.TotalSeats = incoming.TotalSeats;
         ev.AvailableSeats = incoming.AvailableSeats;
         ev.Price = incoming.Price;
+        ev.ImageUrl = incoming.ImageUrl;
+        ev.EventType = incoming.EventType;
         await db.SaveChangesAsync();
         await hub.Clients.All.SendAsync("EventUpdated", id);
         return NoContent();

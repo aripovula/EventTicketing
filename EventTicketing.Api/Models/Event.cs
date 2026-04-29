@@ -14,7 +14,9 @@ public class Event
     [MaxLength(2000)]
     public string Description { get; set; } = string.Empty;
 
-    public DateTime Date { get; set; }
+    public DateTime StartTime { get; set; }
+
+    public DateTime EndTime { get; set; }
 
     [Required]
     [MaxLength(200)]
@@ -32,4 +34,7 @@ public class Event
 
     [MaxLength(500)]
     public string? ImageUrl { get; set; }
+
+    [MaxLength(50)]
+    public string EventType { get; set; } = "Other";
 }

@@ -27,7 +27,7 @@ public class AdminController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<IEnumerable<EventSummary>>> GetSummary()
     {
         var summary = await db.Events
-            .OrderBy(e => e.Date)
+            .OrderBy(e => e.StartTime)
             .Select(e => new EventSummary(
                 e.Id,
                 e.Title,
