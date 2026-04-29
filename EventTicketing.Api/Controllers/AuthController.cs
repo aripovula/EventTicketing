@@ -45,9 +45,9 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         Response.Cookies.Append(CookieName, token, new CookieOptions
         {
             HttpOnly = true,
-            Secure   = env.IsProduction(),   // require HTTPS in production only
+            Secure = env.IsProduction(),   // require HTTPS in production only
             SameSite = SameSiteMode.Strict,
-            Expires  = DateTimeOffset.UtcNow.AddHours(8),
+            Expires = DateTimeOffset.UtcNow.AddHours(8),
         });
 
         return Ok(new UserInfo(user.Id, user.Name, user.Email, user.Role));
@@ -57,10 +57,10 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
     [HttpGet("me")]
     public ActionResult<UserInfo> Me()
     {
-        var idClaim    = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var emailClaim = User.FindFirstValue(ClaimTypes.Email);
-        var nameClaim  = User.FindFirstValue(ClaimTypes.Name);
-        var roleClaim  = User.FindFirstValue(ClaimTypes.Role);
+        var nameClaim = User.FindFirstValue(ClaimTypes.Name);
+        var roleClaim = User.FindFirstValue(ClaimTypes.Role);
 
         if (idClaim is null || emailClaim is null || nameClaim is null || roleClaim is null)
             return Unauthorized();

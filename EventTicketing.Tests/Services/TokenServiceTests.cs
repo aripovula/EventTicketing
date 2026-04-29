@@ -14,18 +14,18 @@ public class TokenServiceTests
         new(new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Jwt:Key"]      = "test-jwt-key-that-is-32-characters!",
-                ["Jwt:Issuer"]   = "TestIssuer",
+                ["Jwt:Key"] = "test-jwt-key-that-is-32-characters!",
+                ["Jwt:Issuer"] = "TestIssuer",
                 ["Jwt:Audience"] = "TestAudience",
             })
             .Build());
 
     private static User SampleUser(string role = "user") => new()
     {
-        Id    = 42,
-        Name  = "Jane Doe",
+        Id = 42,
+        Name = "Jane Doe",
         Email = "jane@example.com",
-        Role  = role,
+        Role = role,
     };
 
     private static JwtSecurityToken ParseToken(string raw)
@@ -103,13 +103,13 @@ public class TokenServiceTests
 
         handler.ValidateToken(raw, new TokenValidationParameters
         {
-            ValidateIssuer           = true,
-            ValidateAudience         = true,
-            ValidateLifetime         = true,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer              = "TestIssuer",
-            ValidAudience            = "TestAudience",
-            IssuerSigningKey         = key,
+            ValidIssuer = "TestIssuer",
+            ValidAudience = "TestAudience",
+            IssuerSigningKey = key,
         }, out var validated);
 
         Assert.NotNull(validated);

@@ -21,7 +21,7 @@ public class AuthControllerTests : IDisposable
     private readonly AuthController _controller;
 
     private const string TestPassword = "Password123";
-    private const string TestEmail    = "alice@example.com";
+    private const string TestEmail = "alice@example.com";
 
     public AuthControllerTests()
     {
@@ -38,8 +38,8 @@ public class AuthControllerTests : IDisposable
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Jwt:Key"]      = "test-jwt-key-that-is-32-characters!",
-                ["Jwt:Issuer"]   = "TestIssuer",
+                ["Jwt:Key"] = "test-jwt-key-that-is-32-characters!",
+                ["Jwt:Issuer"] = "TestIssuer",
                 ["Jwt:Audience"] = "TestAudience",
             })
             .Build();
@@ -73,12 +73,12 @@ public class AuthControllerTests : IDisposable
     {
         _db.Cards.Add(new Card
         {
-            UserId          = userId,
-            Last4           = last4,
+            UserId = userId,
+            Last4 = last4,
             EncryptedNumber = "dummy",
-            ExpiryDate      = "12/32",
-            CardType        = "Visa",
-            IsDefault       = isDefault,
+            ExpiryDate = "12/32",
+            CardType = "Visa",
+            IsDefault = isDefault,
         });
         _db.SaveChanges();
     }
@@ -103,10 +103,10 @@ public class AuthControllerTests : IDisposable
             new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword })).Result!;
 
         var info = Assert.IsType<AuthController.UserInfo>(ok.Value);
-        Assert.Equal(seeded.Id,    info.UserId);
-        Assert.Equal(seeded.Name,  info.Name);
+        Assert.Equal(seeded.Id, info.UserId);
+        Assert.Equal(seeded.Name, info.Name);
         Assert.Equal(seeded.Email, info.Email);
-        Assert.Equal("user",       info.Role);
+        Assert.Equal("user", info.Role);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class AuthControllerTests : IDisposable
     public async Task Login_WithUnknownEmail_Returns401()
     {
         var result = await _controller.Login(new AuthController.LoginRequest
-            { Email = "nobody@example.com", Password = TestPassword });
+        { Email = "nobody@example.com", Password = TestPassword });
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
@@ -165,7 +165,7 @@ public class AuthControllerTests : IDisposable
     {
         SeedUser();
         var result = await _controller.Login(new AuthController.LoginRequest
-            { Email = TestEmail, Password = "wrong-password" });
+        { Email = TestEmail, Password = "wrong-password" });
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
@@ -195,10 +195,10 @@ public class AuthControllerTests : IDisposable
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var info = Assert.IsType<AuthController.UserInfo>(ok.Value);
-        Assert.Equal(seeded.Id,    info.UserId);
-        Assert.Equal(seeded.Name,  info.Name);
+        Assert.Equal(seeded.Id, info.UserId);
+        Assert.Equal(seeded.Name, info.Name);
         Assert.Equal(seeded.Email, info.Email);
-        Assert.Equal("user",       info.Role);
+        Assert.Equal("user", info.Role);
     }
 
     [Fact]
