@@ -3,6 +3,7 @@ using System.Security.Claims;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return Ok(ev);
     }
 
+    [Authorize(Roles = "admin")]
     [HttpPost]
     public async Task<ActionResult<Event>> Create(Event ev)
     {
@@ -36,6 +38,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return CreatedAtAction(nameof(GetById), new { id = ev.Id }, ev);
     }
 
+    [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Event incoming)
     {
@@ -54,6 +57,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return NoContent();
     }
 
+    [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

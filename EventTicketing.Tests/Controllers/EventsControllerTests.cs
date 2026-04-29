@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Security.Claims;
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
@@ -602,6 +604,34 @@ public class EventsControllerTests : IDisposable
         await _controller.Book(1, TestBookRequest);
 
         Assert.Empty(_hub.SentMessages);
+    }
+
+    // Admin-only authorization — verified via reflection because [Authorize] is
+    // enforced by ASP.NET middleware, not by the controller method itself.
+
+    [Theory]
+    [InlineData(nameof(EventsController.Create))]
+    [InlineData(nameof(EventsController.Update))]
+    [InlineData(nameof(EventsController.Delete))]
+    public void AdminMutations_HaveAuthorizeAdminAttribute(string methodName)
+    {
+        var method = typeof(EventsController)
+            .GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)!;
+        var attr = method.GetCustomAttribute<AuthorizeAttribute>();
+        Assert.NotNull(attr);
+        Assert.Equal("admin", attr.Roles);
+    }
+
+    [Theory]
+    [InlineData(nameof(EventsController.GetAll))]
+    [InlineData(nameof(EventsController.GetById))]
+    [InlineData(nameof(EventsController.GetOrdersByEmail))]
+    [InlineData(nameof(EventsController.GetOrderById))]
+    public void PublicReadEndpoints_DoNotHaveAuthorizeAttribute(string methodName)
+    {
+        var method = typeof(EventsController)
+            .GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)!;
+        Assert.Null(method.GetCustomAttribute<AuthorizeAttribute>());
     }
 }
 
