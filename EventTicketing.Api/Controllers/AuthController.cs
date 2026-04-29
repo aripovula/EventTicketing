@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using EventTicketing.Api.Data;
+using EventTicketing.Api.Models;
 using EventTicketing.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -68,6 +69,19 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
     }
 
     public record DefaultCard(string Last4, string CardType, string ExpiryDate);
+
+    [Authorize]
+    [HttpGet("me/orders")]
+    public async Task<ActionResult<IEnumerable<Order>>> GetMyOrders()
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var orders = await db.Orders
+            .Where(o => o.UserId == userId)
+            .Include(o => o.Event)
+            .OrderByDescending(o => o.BookedAt)
+            .ToListAsync();
+        return Ok(orders);
+    }
 
     [Authorize]
     [HttpGet("me/cards/default")]

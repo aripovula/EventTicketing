@@ -3,20 +3,34 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import OrdersList from './OrdersList'
+import { AuthProvider } from '../context/AuthContext'
 
 const mockOrders = [
   { id: 10, eventId: 1, email: 'user@example.com', price: 25, bookedAt: '2026-04-18T10:00:00Z' },
   { id: 11, eventId: 2, email: 'user@example.com', price: 40, bookedAt: '2026-04-17T10:00:00Z' },
 ]
 
-const mockEvent1 = { id: 1, title: 'Jazz Night', date: '2026-08-15T20:00:00', venue: 'Blue Note Club' }
+const mockOrdersWithEvent = [
+  { id: 10, eventId: 1, email: 'john@example.com', price: 25, bookedAt: '2026-04-18T10:00:00Z',
+    event: { id: 1, title: 'Jazz Night',  date: '2026-08-15T20:00:00', venue: 'Blue Note Club' } },
+  { id: 11, eventId: 2, email: 'john@example.com', price: 40, bookedAt: '2026-04-17T10:00:00Z',
+    event: { id: 2, title: 'Rock Fest', date: '2026-09-01T18:00:00', venue: 'City Arena' } },
+]
+
+const mockEvent1 = { id: 1, title: 'Jazz Night',  date: '2026-08-15T20:00:00', venue: 'Blue Note Club' }
 const mockEvent2 = { id: 2, title: 'Rock Fest', date: '2026-09-01T18:00:00', venue: 'City Arena' }
+
+const johnUser = { userId: 1, name: 'John Doe', email: 'john@example.com', role: 'user' }
+
+const notLoggedIn = { ok: false, status: 401, json: () => Promise.resolve(null) } as Response
 
 function renderComponent() {
   return render(
-    <MemoryRouter>
-      <OrdersList />
-    </MemoryRouter>
+    <AuthProvider>
+      <MemoryRouter>
+        <OrdersList />
+      </MemoryRouter>
+    </AuthProvider>
   )
 }
 
@@ -28,19 +42,25 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test('shows email input and look up button initially', () => {
+// ── Guest (not logged in) ──────────────────────────────────────────────────────
+// Fetch order: AuthProvider → GET /api/auth/me (401), then email form submit
+
+test('shows email input and look up button for guest', async () => {
+  vi.mocked(fetch).mockResolvedValue(notLoggedIn)
   renderComponent()
-  expect(screen.getByRole('textbox', { name: /email/i })).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('textbox', { name: /email/i })).toBeInTheDocument())
   expect(screen.getByRole('button', { name: /look up/i })).toBeInTheDocument()
 })
 
 test('shows orders after successful lookup', async () => {
   vi.mocked(fetch)
-    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
-    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent1) } as Response)
-    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent2) } as Response)
+    .mockResolvedValueOnce(notLoggedIn)                                                               // /me
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)        // orders by email
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent1) } as Response)        // event 1
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent2) } as Response)        // event 2
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
@@ -50,11 +70,13 @@ test('shows orders after successful lookup', async () => {
 
 test('shows venue and date for each order', async () => {
   vi.mocked(fetch)
+    .mockResolvedValueOnce(notLoggedIn)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent1) } as Response)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent2) } as Response)
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
@@ -64,11 +86,13 @@ test('shows venue and date for each order', async () => {
 
 test('shows order id and price', async () => {
   vi.mocked(fetch)
+    .mockResolvedValueOnce(notLoggedIn)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent1) } as Response)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent2) } as Response)
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
@@ -78,11 +102,13 @@ test('shows order id and price', async () => {
 
 test('shows view confirmation link for each order', async () => {
   vi.mocked(fetch)
+    .mockResolvedValueOnce(notLoggedIn)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent1) } as Response)
     .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent2) } as Response)
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
@@ -93,9 +119,12 @@ test('shows view confirmation link for each order', async () => {
 })
 
 test('shows empty state when no orders found', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) } as Response)
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(notLoggedIn)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) } as Response)
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'nobody@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
@@ -103,9 +132,12 @@ test('shows empty state when no orders found', async () => {
 })
 
 test('shows error state on failed fetch', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce({ ok: false } as Response)
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(notLoggedIn)
+    .mockResolvedValueOnce({ ok: false } as Response)
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
@@ -114,12 +146,64 @@ test('shows error state on failed fetch', async () => {
 
 test('fetches orders with encoded email as query param', async () => {
   const fetchMock = vi.mocked(fetch)
-  fetchMock.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) } as Response)
+  fetchMock
+    .mockResolvedValueOnce(notLoggedIn)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) } as Response)
 
   renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
   await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
   await userEvent.click(screen.getByRole('button', { name: /look up/i }))
 
   await waitFor(() => screen.getByText(/no orders found/i))
   expect(fetchMock).toHaveBeenCalledWith('/api/events/orders?email=user%40example.com')
+})
+
+// ── Logged-in user ─────────────────────────────────────────────────────────────
+// Fetch order: AuthProvider → GET /api/auth/me (200+user), then auto-fetch /api/auth/me/orders
+
+test('hides email form for logged-in user', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(johnUser) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrdersWithEvent) } as Response)
+
+  renderComponent()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  expect(screen.queryByRole('textbox', { name: /email/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /look up/i })).not.toBeInTheDocument()
+})
+
+test('auto-fetches orders from /api/auth/me/orders for logged-in user', async () => {
+  const fetchMock = vi.mocked(fetch)
+  fetchMock
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(johnUser) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrdersWithEvent) } as Response)
+
+  renderComponent()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  expect(fetchMock).toHaveBeenCalledWith('/api/auth/me/orders')
+})
+
+test('shows orders with event details for logged-in user', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(johnUser) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrdersWithEvent) } as Response)
+
+  renderComponent()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  expect(screen.getByText('Rock Fest')).toBeInTheDocument()
+  expect(screen.getByText(/Blue Note Club/)).toBeInTheDocument()
+  expect(screen.getByText(/Order #10/)).toBeInTheDocument()
+})
+
+test('shows empty state when logged-in user has no orders', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(johnUser) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) } as Response)
+
+  renderComponent()
+  await waitFor(() => expect(screen.getByText(/no orders found/i)).toBeInTheDocument())
 })
