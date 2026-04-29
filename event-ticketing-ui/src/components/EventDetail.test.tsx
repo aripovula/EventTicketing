@@ -23,11 +23,13 @@ const mockEvent = {
   id: 1,
   title: 'Jazz Night',
   description: 'An evening of live jazz music.',
-  date: '2026-06-15T20:00:00',
+  startTime: '2026-06-15T20:00:00',
+  endTime:   '2026-06-15T23:00:00',
   venue: 'Blue Note Club',
   totalSeats: 100,
   availableSeats: 80,
   price: 25,
+  eventType: 'Music',
 }
 const mockOrder = { id: 42, eventId: 1, email: 'user@example.com', price: 25, bookedAt: '2026-04-17T00:00:00Z' }
 
@@ -337,4 +339,16 @@ test('email field is empty when user is not logged in', async () => {
 
   const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement
   expect(emailInput.value).toBe('')
+})
+
+// ── Time display (startTime / endTime) ─────────────────────────────────────────
+
+test('renders venue alongside start date', async () => {
+  vi.mocked(fetch).mockResolvedValue(eventRes)
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  // venue and formatted start date appear together in the subtitle
+  expect(screen.getByText(/Blue Note Club/)).toBeInTheDocument()
+  const subtitle = screen.getByText(/Blue Note Club/).textContent ?? ''
+  expect(subtitle).toMatch(/Jun|June/)
 })

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { EVENT_TYPES } from '../utils/eventTypes'
 
 type EventFormData = {
   title: string
   description: string
-  date: string
+  startTime: string
+  endTime: string
+  eventType: string
   venue: string
   totalSeats: number
   availableSeats: number
@@ -15,7 +18,9 @@ type EventFormData = {
 const emptyForm: EventFormData = {
   title: '',
   description: '',
-  date: '',
+  startTime: '',
+  endTime: '',
+  eventType: 'Music',
   venue: '',
   totalSeats: 0,
   availableSeats: 0,
@@ -42,7 +47,9 @@ export default function AdminEventForm() {
         setForm({
           title: data.title,
           description: data.description,
-          date: data.date.slice(0, 16),
+          startTime: data.startTime.slice(0, 16),
+          endTime: data.endTime.slice(0, 16),
+          eventType: data.eventType ?? 'Music',
           venue: data.venue,
           totalSeats: data.totalSeats,
           availableSeats: data.availableSeats,
@@ -53,7 +60,7 @@ export default function AdminEventForm() {
       })
   }, [id, isEdit])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setForm(prev => ({
       ...prev,
@@ -121,9 +128,22 @@ export default function AdminEventForm() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label htmlFor="date" className={labelClass}>Date</label>
-              <input id="date" name="date" type="datetime-local" value={form.date} onChange={handleChange} required className={inputClass} />
+              <label htmlFor="startTime" className={labelClass}>Start time</label>
+              <input id="startTime" name="startTime" type="datetime-local" value={form.startTime} onChange={handleChange} required className={inputClass} />
             </div>
+            <div>
+              <label htmlFor="endTime" className={labelClass}>End time</label>
+              <input id="endTime" name="endTime" type="datetime-local" value={form.endTime} onChange={handleChange} required className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="eventType" className={labelClass}>Event type</label>
+              <select id="eventType" name="eventType" value={form.eventType} onChange={handleChange} className={inputClass}>
+                {EVENT_TYPES.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label htmlFor="totalSeats" className={labelClass}>Total seats</label>
               <input id="totalSeats" name="totalSeats" type="number" min="1" value={form.totalSeats} onChange={handleChange} required className={inputClass} />
@@ -132,11 +152,10 @@ export default function AdminEventForm() {
               <label htmlFor="availableSeats" className={labelClass}>Available seats</label>
               <input id="availableSeats" name="availableSeats" type="number" min="0" value={form.availableSeats} onChange={handleChange} required className={inputClass} />
             </div>
-          </div>
-
-          <div className="sm:w-1/3">
-            <label htmlFor="price" className={labelClass}>Price ($)</label>
-            <input id="price" name="price" type="number" min="0" step="0.01" value={form.price} onChange={handleChange} required className={inputClass} />
+            <div>
+              <label htmlFor="price" className={labelClass}>Price ($)</label>
+              <input id="price" name="price" type="number" min="0" step="0.01" value={form.price} onChange={handleChange} required className={inputClass} />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

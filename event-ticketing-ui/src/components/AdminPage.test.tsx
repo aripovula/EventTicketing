@@ -101,3 +101,17 @@ test('confirming deletion calls DELETE and removes event from list', async () =>
   await waitFor(() => expect(screen.queryByText('Jazz Night')).not.toBeInTheDocument())
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
+
+// ── Header nav links ───────────────────────────────────────────────────────────
+
+test('shows Events Calendar link', async () => {
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  expect(screen.getByRole('link', { name: /events calendar/i })).toBeInTheDocument()
+})
+
+test('Events Calendar link points to /admin/calendar', async () => {
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  expect(screen.getByRole('link', { name: /events calendar/i })).toHaveAttribute('href', '/admin/calendar')
+})

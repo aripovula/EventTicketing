@@ -12,13 +12,13 @@ const mockOrders = [
 
 const mockOrdersWithEvent = [
   { id: 10, eventId: 1, email: 'john@example.com', price: 25, bookedAt: '2026-04-18T10:00:00Z',
-    event: { id: 1, title: 'Jazz Night',  date: '2026-08-15T20:00:00', venue: 'Blue Note Club' } },
+    event: { id: 1, title: 'Jazz Night',  startTime: '2026-08-15T20:00:00', venue: 'Blue Note Club' } },
   { id: 11, eventId: 2, email: 'john@example.com', price: 40, bookedAt: '2026-04-17T10:00:00Z',
-    event: { id: 2, title: 'Rock Fest', date: '2026-09-01T18:00:00', venue: 'City Arena' } },
+    event: { id: 2, title: 'Rock Fest', startTime: '2026-09-01T18:00:00', venue: 'City Arena' } },
 ]
 
-const mockEvent1 = { id: 1, title: 'Jazz Night',  date: '2026-08-15T20:00:00', venue: 'Blue Note Club' }
-const mockEvent2 = { id: 2, title: 'Rock Fest', date: '2026-09-01T18:00:00', venue: 'City Arena' }
+const mockEvent1 = { id: 1, title: 'Jazz Night',  startTime: '2026-08-15T20:00:00', venue: 'Blue Note Club' }
+const mockEvent2 = { id: 2, title: 'Rock Fest', startTime: '2026-09-01T18:00:00', venue: 'City Arena' }
 
 const johnUser = { userId: 1, name: 'John Doe', email: 'john@example.com', role: 'user' }
 
@@ -206,4 +206,35 @@ test('shows empty state when logged-in user has no orders', async () => {
 
   renderComponent()
   await waitFor(() => expect(screen.getByText(/no orders found/i)).toBeInTheDocument())
+})
+
+// ── startTime display ──────────────────────────────────────────────────────────
+
+test('displays event date formatted from startTime for logged-in user', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(johnUser) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrdersWithEvent) } as Response)
+
+  renderComponent()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  // Aug 15 2026 should appear somewhere in the order card
+  const items = screen.getAllByRole('listitem')
+  expect(items[0].textContent).toMatch(/Aug|August/)
+})
+
+test('displays event date formatted from startTime for guest lookup', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(notLoggedIn)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent1) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent2) } as Response)
+
+  renderComponent()
+  await waitFor(() => screen.getByRole('textbox', { name: /email/i }))
+  await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com')
+  await userEvent.click(screen.getByRole('button', { name: /look up/i }))
+
+  await waitFor(() => screen.getByText('Jazz Night'))
+  const items = screen.getAllByRole('listitem')
+  expect(items[0].textContent).toMatch(/Aug|August/)
 })

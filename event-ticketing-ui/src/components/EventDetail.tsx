@@ -8,12 +8,14 @@ type Event = {
   id: number
   title: string
   description: string
-  date: string
+  startTime: string
+  endTime: string
   venue: string
   totalSeats: number
   availableSeats: number
   price: number
   imageUrl?: string
+  eventType: string
 }
 
 type User = {
@@ -117,7 +119,10 @@ export default function EventDetail() {
         <div className="p-6">
         <h1 className="text-3xl font-bold text-gray-900 mt-0 mb-2">{event.title}</h1>
         <p className="text-gray-500 text-sm mb-6">
-          {event.venue} · {new Date(event.date).toLocaleDateString(undefined, { dateStyle: 'long' })}
+          {event.venue} · {new Date(event.startTime).toLocaleDateString(undefined, { dateStyle: 'long' })}{' '}
+          {new Date(event.startTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+          {' – '}
+          {new Date(event.endTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
         </p>
 
         <p className="text-gray-700 leading-relaxed mb-6">{event.description}</p>
@@ -146,7 +151,7 @@ export default function EventDetail() {
       {modalOpen && (
         <BookingModal
           eventTitle={event.title}
-          eventDate={event.date}
+          eventDate={event.startTime}
           eventVenue={event.venue}
           price={event.price}
           savedEmail={userData?.email ?? user?.email}

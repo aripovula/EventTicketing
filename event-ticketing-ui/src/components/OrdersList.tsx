@@ -8,7 +8,7 @@ type OrderWithEvent = {
   email: string
   price: number
   bookedAt: string
-  event: { id: number; title: string; date: string; venue: string } | null
+  event: { id: number; title: string; startTime: string; venue: string } | null
 }
 
 export default function OrdersList() {
@@ -98,7 +98,7 @@ export default function OrdersList() {
               </p>
               {order.event && (
                 <p className="text-sm text-gray-500 mb-2">
-                  {order.event.venue} · {new Date(order.event.date).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                  {order.event.venue} · {new Date(order.event.startTime).toLocaleDateString(undefined, { dateStyle: 'long' })}
                 </p>
               )}
               <p className="text-sm text-gray-500">
