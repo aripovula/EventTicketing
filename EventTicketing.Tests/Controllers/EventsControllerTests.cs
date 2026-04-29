@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
@@ -242,6 +244,16 @@ public class EventsControllerTests : IDisposable
 
     private static readonly EventsController.BookRequest TestBookRequest = new() { Email = "test@example.com" };
 
+    private void SetAuthenticatedUser(int userId)
+    {
+        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var identity = new ClaimsIdentity(claims, "Test");
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) },
+        };
+    }
+
     [Fact]
     public async Task Book_ExistingEvent_ReturnsCreated()
     {
@@ -354,6 +366,34 @@ public class EventsControllerTests : IDisposable
         var ex = await Assert.ThrowsAsync<Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException>(
             () => _db.SaveChangesAsync());
         Assert.NotNull(ex);
+    }
+
+    [Fact]
+    public async Task Book_AuthenticatedUser_StoresUserIdOnOrder()
+    {
+        var user = new User { Name = "Alice", Email = "alice@example.com", PasswordHash = "x", Role = "user" };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        SetAuthenticatedUser(userId: user.Id);
+
+        var result = await _controller.Book(1, TestBookRequest);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var order = Assert.IsType<Order>(created.Value);
+        Assert.Equal(user.Id, order.UserId);
+    }
+
+    [Fact]
+    public async Task Book_GuestUser_LeavesUserIdNull()
+    {
+        // No SetAuthenticatedUser call — controller has no ClaimsPrincipal
+
+        var result = await _controller.Book(1, TestBookRequest);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var order = Assert.IsType<Order>(created.Value);
+        Assert.Null(order.UserId);
     }
 
     // GET /api/events/orders?email=...

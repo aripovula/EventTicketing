@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
@@ -78,9 +79,11 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         if (ev is null) return NotFound();
         if (ev.AvailableSeats == 0) return Conflict();
         ev.AvailableSeats--;
+        var userIdClaim = User?.FindFirstValue(ClaimTypes.NameIdentifier);
         var order = new Order
         {
             EventId = id,
+            UserId = userIdClaim is not null ? int.Parse(userIdClaim) : null,
             Email = request.Email,
             Price = ev.Price,
             BookedAt = DateTime.UtcNow,

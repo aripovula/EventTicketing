@@ -20,6 +20,7 @@ vi.mock('@microsoft/signalr', () => ({
 const mockOrders = [
   {
     id: 10,
+    userId: 4,
     email: 'alice@example.com',
     price: 25,
     bookedAt: '2026-04-18T10:00:00Z',
@@ -27,6 +28,7 @@ const mockOrders = [
   },
   {
     id: 11,
+    userId: 5,
     email: 'bob@example.com',
     price: 149,
     bookedAt: '2026-04-17T09:00:00Z',
@@ -64,6 +66,13 @@ test('shows all orders after fetch', async () => {
   renderComponent()
   await waitFor(() => screen.getByText('alice@example.com'))
   expect(screen.getByText('bob@example.com')).toBeInTheDocument()
+})
+
+test('shows userId for each order', async () => {
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockOrders) } as Response)
+  renderComponent()
+  await waitFor(() => screen.getByText('4'))
+  expect(screen.getByText('4')).toBeInTheDocument()
 })
 
 test('shows email for each order', async () => {

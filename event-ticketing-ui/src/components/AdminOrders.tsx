@@ -4,6 +4,7 @@ import { useHubEvents } from '../hooks/useHubEvents'
 
 type Order = {
   id: number
+  userId: string
   email: string
   price: number
   bookedAt: string
@@ -71,6 +72,7 @@ export default function AdminOrders() {
                 <tr>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Order #</th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Event</th>
+                  <th className="text-left px-6 py-3 font-medium text-gray-500">User Id</th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Email</th>
                   <th className="text-right px-6 py-3 font-medium text-gray-500">Price</th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Booked at</th>
@@ -81,6 +83,7 @@ export default function AdminOrders() {
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-gray-500">#{order.id}</td>
                     <td className="px-6 py-4 font-medium text-gray-900">{order.event?.title ?? '—'}</td>
+                    <td className="px-6 py-4 text-gray-700">{order.userId}</td>
                     <td className="px-6 py-4 text-gray-700">{order.email}</td>
                     <td className="px-6 py-4 text-right text-indigo-600 font-medium">${order.price}</td>
                     <td className="px-6 py-4 text-gray-500">
