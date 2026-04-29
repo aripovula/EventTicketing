@@ -8,6 +8,7 @@ import OrdersList from './components/OrdersList'
 import AdminOrders from './components/AdminOrders'
 import AdminSummary from './components/AdminSummary'
 import LoginPage from './components/LoginPage'
+import ProfilePage from './components/ProfilePage'
 import RequireAdmin from './components/RequireAdmin'
 import { useAuth } from './context/AuthContext'
 
@@ -25,6 +26,9 @@ function HeaderNav() {
       <nav className="flex items-center gap-4">
         <Link to="/orders" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
           My orders
+        </Link>
+        <Link to="/profile" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+          Profile
         </Link>
         {user.role === 'admin' && (
           <Link to="/admin" className="text-sm text-gray-500 hover:text-indigo-600 transition-colors">
@@ -70,6 +74,7 @@ function App() {
             <Route path="/orders" element={<OrdersList />} />
             <Route path="/orders/:id" element={<OrderConfirmation />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/orders" element={<AdminOrders />} />

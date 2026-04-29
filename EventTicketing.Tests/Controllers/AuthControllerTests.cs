@@ -256,6 +256,84 @@ public class AuthControllerTests : IDisposable
         Assert.Equal("4242", card.Last4);
     }
 
+    // ── PUT /me/cards/default ─────────────────────────────────────────────────
+
+    private static AuthController.SaveCardRequest ValidCardRequest(string number = "4111111111111111") =>
+        new() { CardNumber = number, CardType = "Visa", ExpiryDate = "12/32" };
+
+    [Fact]
+    public async Task SaveMyDefaultCard_NoExistingCard_CreatesCard()
+    {
+        var user = SeedUser();
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(user);
+
+        await _controller.SaveMyDefaultCard(ValidCardRequest());
+
+        Assert.Equal(1, await _db.Cards.CountAsync());
+    }
+
+    [Fact]
+    public async Task SaveMyDefaultCard_NoExistingCard_ReturnsNoContent()
+    {
+        var user = SeedUser();
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(user);
+
+        var result = await _controller.SaveMyDefaultCard(ValidCardRequest());
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task SaveMyDefaultCard_StoresCorrectLast4()
+    {
+        var user = SeedUser();
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(user);
+
+        await _controller.SaveMyDefaultCard(ValidCardRequest("4111111111114242"));
+
+        var card = await _db.Cards.FirstAsync();
+        Assert.Equal("4242", card.Last4);
+    }
+
+    [Fact]
+    public async Task SaveMyDefaultCard_NewCardIsDefault()
+    {
+        var user = SeedUser();
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(user);
+
+        await _controller.SaveMyDefaultCard(ValidCardRequest());
+
+        var card = await _db.Cards.FirstAsync();
+        Assert.True(card.IsDefault);
+    }
+
+    [Fact]
+    public async Task SaveMyDefaultCard_UpdatesExistingDefaultCard()
+    {
+        var user = SeedUser();
+        SeedCard(user.Id, last4: "1111", isDefault: true);
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(user);
+
+        await _controller.SaveMyDefaultCard(ValidCardRequest("4111111111114242"));
+
+        Assert.Equal(1, await _db.Cards.CountAsync());
+        var card = await _db.Cards.FirstAsync();
+        Assert.Equal("4242", card.Last4);
+    }
+
+    [Fact]
+    public async Task SaveMyDefaultCard_UpdatedCardRetainsIsDefault()
+    {
+        var user = SeedUser();
+        SeedCard(user.Id, last4: "1111", isDefault: true);
+        _controller.ControllerContext.HttpContext.User = MakePrincipal(user);
+
+        await _controller.SaveMyDefaultCard(ValidCardRequest("4111111111114242"));
+
+        var card = await _db.Cards.FirstAsync();
+        Assert.True(card.IsDefault);
+    }
+
     // ── /logout ───────────────────────────────────────────────────────────────
 
     [Fact]

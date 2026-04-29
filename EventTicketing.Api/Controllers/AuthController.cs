@@ -83,6 +83,55 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         return Ok(orders);
     }
 
+    public class SaveCardRequest
+    {
+        [Required]
+        [RegularExpression(@"^\d{13,19}$", ErrorMessage = "Card number must be 13–19 digits.")]
+        public string CardNumber { get; set; } = string.Empty;
+
+        [Required]
+        [AllowedValues("Visa", "Mastercard", "Amex", "Discover")]
+        public string CardType { get; set; } = string.Empty;
+
+        [Required]
+        [RegularExpression(@"^(0[1-9]|1[0-2])\/\d{2}$", ErrorMessage = "Expiry must be MM/YY.")]
+        public string ExpiryDate { get; set; } = string.Empty;
+    }
+
+    [Authorize]
+    [HttpPut("me/cards/default")]
+    public async Task<IActionResult> SaveMyDefaultCard(SaveCardRequest request)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var last4 = request.CardNumber[^4..];
+
+        var existing = await db.Cards
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.IsDefault);
+
+        if (existing is not null)
+        {
+            existing.Last4 = last4;
+            existing.CardType = request.CardType;
+            existing.ExpiryDate = request.ExpiryDate;
+            existing.EncryptedNumber = $"redacted-{last4}";
+        }
+        else
+        {
+            db.Cards.Add(new Card
+            {
+                UserId = userId,
+                Last4 = last4,
+                CardType = request.CardType,
+                ExpiryDate = request.ExpiryDate,
+                EncryptedNumber = $"redacted-{last4}",
+                IsDefault = true,
+            });
+        }
+
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     [Authorize]
     [HttpGet("me/cards/default")]
     public async Task<ActionResult<DefaultCard>> GetMyDefaultCard()
