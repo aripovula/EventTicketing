@@ -37,7 +37,6 @@ const mockOrder = { id: 42, eventId: 1, email: 'user@example.com', price: 25, bo
 //   3. EventDetail useEffect[user]      → GET /api/auth/me/cards/default  (only when user != null)
 
 const eventRes  = { ok: true,  status: 200, json: () => Promise.resolve(mockEvent) } as Response
-const notLoggedIn = { ok: false, status: 401, json: () => Promise.resolve(null) } as Response
 
 function renderWithRoute(id: string) {
   return render(

@@ -83,8 +83,6 @@ test('token is not stored anywhere in JS-accessible storage after login', async 
   await renderAndSettle(() => Promise.resolve(new Response(null, { status: 401 })))
   await userEvent.click(screen.getByRole('button', { name: 'login' }))
   // AuthUser has no token field — confirm it's absent
-  const { user } = screen.getByTestId('name').closest('div')!.__reactFiber$
-    ? {} : {}  // just check the type below
   expect('token' in testUser).toBe(false)
   expect(localStorage.getItem('auth_user')).toBeNull()
   expect(sessionStorage.getItem('auth_user')).toBeNull()

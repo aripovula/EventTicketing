@@ -1,5 +1,5 @@
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 type Handlers = Record<string, (...args: unknown[]) => void>
 
@@ -17,7 +17,11 @@ type Handlers = Record<string, (...args: unknown[]) => void>
  */
 export function useHubEvents(handlers: Handlers): void {
   const handlersRef = useRef<Handlers>(handlers)
-  handlersRef.current = handlers
+
+  // Keep the ref in sync with the latest handlers without restarting the connection.
+  useLayoutEffect(() => {
+    handlersRef.current = handlers
+  })
 
   // Capture event names at mount time; they must remain stable across renders.
   const eventNamesRef = useRef(Object.keys(handlers))
