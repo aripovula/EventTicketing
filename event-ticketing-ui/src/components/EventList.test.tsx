@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from '../context/AuthContext'
 import EventList from './EventList'
 
 vi.mock('@microsoft/signalr', () => ({
@@ -22,46 +23,62 @@ const mockEvents = [
     id: 1,
     title: 'Jazz Night',
     description: 'An evening of live jazz music.',
-    date: '2026-08-15T20:00:00',
+    startTime: '2026-08-15T20:00:00',
+    endTime:   '2026-08-15T23:00:00',
     venue: 'Blue Note Club',
     totalSeats: 100,
     availableSeats: 100,
     price: 25,
+    eventType: 'Music',
   },
   {
     id: 2,
     title: 'Tech Conference',
     description: 'A full-day conference on modern software development.',
-    date: '2026-07-10T09:00:00',
+    startTime: '2026-07-10T09:00:00',
+    endTime:   '2026-07-10T18:00:00',
     venue: 'City Convention Centre',
     totalSeats: 500,
     availableSeats: 500,
     price: 149,
+    eventType: 'Tech',
   },
 ]
 
-beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: () => Promise.resolve(mockEvents),
+// Route by URL: /api/auth/me → 401 (not logged in), everything else → mockEvents.
+// Child effects (EventList) fire before parent effects (AuthProvider) in React 18+,
+// so order-based mocking is unreliable.
+function renderPage() {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('/api/auth')) {
+      return Promise.resolve(new Response(null, { status: 401 }))
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(mockEvents) } as Response)
   }))
-})
+
+  return render(
+    <AuthProvider>
+      <MemoryRouter><EventList /></MemoryRouter>
+    </AuthProvider>
+  )
+}
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
 test('shows loading state initially', () => {
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   expect(screen.getByText('Loading events...')).toBeInTheDocument()
 })
 
 test('shows filter by text input field', () => {
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   expect(screen.findByPlaceholderText('type search term'))
 })
 
 test('renders events after fetch', async () => {
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => expect(screen.getByText('Jazz Night')).toBeInTheDocument())
   expect(screen.getByText(/Blue Note Club/)).toBeInTheDocument()
   expect(screen.getByText(/25/)).toBeInTheDocument()
@@ -69,7 +86,7 @@ test('renders events after fetch', async () => {
 
 test('filters events by search term', async () => {
   const user = userEvent.setup()
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.type(screen.getByPlaceholderText('type search term'), 'jazz')
@@ -80,7 +97,7 @@ test('filters events by search term', async () => {
 
 test('search filtering is case-insensitive', async () => {
   const user = userEvent.setup()
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.type(screen.getByPlaceholderText('type search term'), 'TECH')
@@ -91,7 +108,7 @@ test('search filtering is case-insensitive', async () => {
 
 test('shows no events when search term matches nothing', async () => {
   const user = userEvent.setup()
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.type(screen.getByPlaceholderText('type search term'), 'zzznomatch')
@@ -100,7 +117,7 @@ test('shows no events when search term matches nothing', async () => {
 })
 
 test('shows sort type dropdown view', async () => {
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   const user = userEvent.setup();
 
   const sortSelect = await screen.findByDisplayValue(/sort by name/i);
@@ -116,7 +133,7 @@ test('shows sort type dropdown view', async () => {
 
 test('sorts events by title', async () => {
   const user = userEvent.setup()
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.selectOptions(screen.getByRole('combobox'), 'name')
@@ -128,7 +145,7 @@ test('sorts events by title', async () => {
 
 test('sorts events by price ascending', async () => {
   const user = userEvent.setup()
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.selectOptions(screen.getByRole('combobox'), 'price')
@@ -140,7 +157,7 @@ test('sorts events by price ascending', async () => {
 
 test('sorts events by date ascending', async () => {
   const user = userEvent.setup()
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   await user.selectOptions(screen.getByRole('combobox'), 'date')
@@ -152,9 +169,12 @@ test('sorts events by date ascending', async () => {
 
 test('shows thumbnail image when imageUrl is present', async () => {
   const eventsWithImage = [{ ...mockEvents[0], imageUrl: 'https://images.unsplash.com/photo-123' }]
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(eventsWithImage) } as Response)
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('/api/auth')) return Promise.resolve(new Response(null, { status: 401 }))
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(eventsWithImage) } as Response)
+  }))
 
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  render(<AuthProvider><MemoryRouter><EventList /></MemoryRouter></AuthProvider>)
   await waitFor(() => screen.getByText('Jazz Night'))
 
   const img = screen.getByRole('img', { name: 'Jazz Night' })
@@ -163,7 +183,7 @@ test('shows thumbnail image when imageUrl is present', async () => {
 })
 
 test('does not show img element when imageUrl is absent', async () => {
-  render(<MemoryRouter><EventList /></MemoryRouter>)
+  renderPage()
   await waitFor(() => screen.getByText('Jazz Night'))
 
   expect(screen.queryByRole('img')).not.toBeInTheDocument()
@@ -172,7 +192,7 @@ test('does not show img element when imageUrl is absent', async () => {
 describe('search input resize', () => {
   test('expands on focus', async () => {
     const user = userEvent.setup()
-    render(<MemoryRouter><EventList /></MemoryRouter>)
+    renderPage()
     await waitFor(() => screen.getByText('Jazz Night'))
 
     const input = screen.getByPlaceholderText('type search term')
@@ -183,7 +203,7 @@ describe('search input resize', () => {
 
   test('shrinks on blur', async () => {
     const user = userEvent.setup()
-    render(<MemoryRouter><EventList /></MemoryRouter>)
+    renderPage()
     await waitFor(() => screen.getByText('Jazz Night'))
 
     const input = screen.getByPlaceholderText('type search term')
@@ -204,8 +224,8 @@ describe.skip('polling', () => {
   })
 
   test('polls API again after 30 seconds', async () => {
-    render(<MemoryRouter><EventList /></MemoryRouter>)
-    await vi.advanceTimersByTimeAsync(10) // flush initial fetch promises
+    renderPage()
+    await vi.advanceTimersByTimeAsync(10)
 
     const callsAfterMount = vi.mocked(fetch).mock.calls.length
 
@@ -221,11 +241,13 @@ describe.skip('polling', () => {
         id: 3,
         title: 'New Event',
         description: 'Just added.',
-        date: '2026-09-01T10:00:00',
+        startTime: '2026-09-01T10:00:00',
+        endTime: '2026-09-01T12:00:00',
         venue: 'New Venue',
         totalSeats: 50,
         availableSeats: 50,
         price: 50,
+        eventType: 'Other',
       },
     ]
 
@@ -233,18 +255,18 @@ describe.skip('polling', () => {
       .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvents) } as Response)
       .mockResolvedValue({ json: () => Promise.resolve(updatedEvents) } as Response)
 
-    render(<MemoryRouter><EventList /></MemoryRouter>)
-    await vi.advanceTimersByTimeAsync(10) // flush initial fetch promises
+    renderPage()
+    await vi.advanceTimersByTimeAsync(10)
     expect(screen.queryByText('New Event')).not.toBeInTheDocument()
 
     await vi.advanceTimersByTimeAsync(30_000)
-    await vi.advanceTimersByTimeAsync(0) // flush fetch promises from interval callback
+    await vi.advanceTimersByTimeAsync(0)
 
     expect(screen.getByText('New Event')).toBeInTheDocument()
   })
 
   test('does not poll after unmount', async () => {
-    const { unmount } = render(<MemoryRouter><EventList /></MemoryRouter>)
+    const { unmount } = renderPage()
     await vi.advanceTimersByTimeAsync(10)
 
     unmount()
@@ -254,4 +276,91 @@ describe.skip('polling', () => {
 
     expect(vi.mocked(fetch).mock.calls.length).toBe(callsAfterUnmount)
   })
+})
+
+// ── Event type badge ───────────────────────────────────────────────────────────
+
+test('shows event type badge for each event', async () => {
+  renderPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+  // Both events have their types in badges
+  expect(screen.getByText('Music')).toBeInTheDocument()
+  expect(screen.getByText('Tech')).toBeInTheDocument()
+})
+
+// ── Conflict detection ─────────────────────────────────────────────────────────
+
+const overlappingOrder = {
+  id: 99,
+  price: 25,
+  bookedAt: '2026-04-01T00:00:00Z',
+  event: {
+    id: 99,
+    title: 'Already Booked Show',
+    startTime: '2026-08-15T19:00:00', // overlaps Jazz Night (20:00–23:00)
+    endTime:   '2026-08-15T21:00:00',
+  },
+}
+
+test('shows conflict warning when a booked event overlaps a listed event', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('/api/auth/me/orders')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([overlappingOrder]) } as Response)
+    }
+    if (String(url).includes('/api/auth')) {
+      // logged-in user
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ userId: 1, name: 'John', email: 'john@example.com', role: 'user' }) } as Response)
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(mockEvents) } as Response)
+  }))
+
+  render(
+    <AuthProvider>
+      <MemoryRouter><EventList /></MemoryRouter>
+    </AuthProvider>
+  )
+
+  await waitFor(() => screen.getByText('Jazz Night'))
+  await waitFor(() =>
+    expect(screen.getByText(/conflicts with Already Booked Show/i)).toBeInTheDocument()
+  )
+})
+
+test('does not show conflict badge when no events overlap', async () => {
+  const nonOverlappingOrder = {
+    id: 98,
+    price: 10,
+    bookedAt: '2026-04-01T00:00:00Z',
+    event: {
+      id: 98,
+      title: 'Distant Event',
+      startTime: '2026-12-01T10:00:00', // far in the future, no overlap
+      endTime:   '2026-12-01T12:00:00',
+    },
+  }
+
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('/api/auth/me/orders')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([nonOverlappingOrder]) } as Response)
+    }
+    if (String(url).includes('/api/auth')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ userId: 1, name: 'John', email: 'john@example.com', role: 'user' }) } as Response)
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(mockEvents) } as Response)
+  }))
+
+  render(
+    <AuthProvider>
+      <MemoryRouter><EventList /></MemoryRouter>
+    </AuthProvider>
+  )
+
+  await waitFor(() => screen.getByText('Jazz Night'))
+  expect(screen.queryByText(/conflicts with/i)).not.toBeInTheDocument()
+})
+
+test('does not show conflict badge for guest users', async () => {
+  renderPage() // guest — no orders fetch
+  await waitFor(() => screen.getByText('Jazz Night'))
+  expect(screen.queryByText(/conflicts with/i)).not.toBeInTheDocument()
 })
