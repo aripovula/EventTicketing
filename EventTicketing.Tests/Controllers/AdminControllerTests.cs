@@ -199,8 +199,9 @@ public class AdminControllerTests : IDisposable
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var rows = Assert.IsAssignableFrom<IEnumerable<AdminController.EventSummary>>(ok.Value).ToList();
-        // Jazz Night is May 2, Tech Conference is May 5
+        // Jazz Night (May 2 19:00), Blues & Soul Evening (May 2 20:30), Tech Conference (May 5)
         Assert.Equal("Jazz Night", rows[0].Title);
-        Assert.Equal("Tech Conference 2026", rows[1].Title);
+        Assert.Equal("Blues & Soul Evening", rows[1].Title);
+        Assert.Equal("Tech Conference 2026", rows[2].Title);
     }
 }

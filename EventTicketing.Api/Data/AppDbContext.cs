@@ -423,6 +423,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Price = 35.00m,
                 EventType = "Music",
                 ImageUrl = "https://images.unsplash.com/photo-1548163111-bc419d75fef4?w=800&q=80",
+            },
+            // ── Conflict with Jazz Night (Id=1, May 2 19:00–22:00) ───────────────
+            new Event
+            {
+                Id = 30,
+                Title = "Blues & Soul Evening",
+                Description = "An electric night of blues and soul with back-to-back sets from four acclaimed artists. Late bar, warm vibes, unforgettable music.",
+                StartTime = new DateTime(2026, 5, 2, 20, 30, 0),
+                EndTime   = new DateTime(2026, 5, 2, 23, 0, 0),
+                Venue = "The Rusty String",
+                TotalSeats = 150,
+                AvailableSeats = 92,
+                Price = 20.00m,
+                EventType = "Music",
+                ImageUrl = "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=80",
             }
         );
     }

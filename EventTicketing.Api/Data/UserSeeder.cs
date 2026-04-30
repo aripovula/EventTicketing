@@ -39,5 +39,17 @@ public static class UserSeeder
 
         db.Users.AddRange(users);
         db.SaveChanges();
+
+        // Seed orders for regular users so conflict detection is visible in the event list.
+        // John and Jane both hold a ticket for Jazz Night (Id=1, May 2 19:00–22:00),
+        // which conflicts with Blues & Soul Evening (Id=30, May 2 20:30–23:00).
+        var john = db.Users.First(u => u.Email == "john@example.com");
+        var jane = db.Users.First(u => u.Email == "jane@example.com");
+
+        db.Orders.AddRange(
+            new Order { EventId = 1, UserId = john.Id, Email = john.Email, Price = 25.00m, BookedAt = new DateTime(2026, 4, 10, 9, 0, 0) },
+            new Order { EventId = 1, UserId = jane.Id, Email = jane.Email, Price = 25.00m, BookedAt = new DateTime(2026, 4, 11, 10, 0, 0) }
+        );
+        db.SaveChanges();
     }
 }

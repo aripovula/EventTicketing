@@ -128,7 +128,7 @@ export default function EventList() {
                     </span>
                     {conflict && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                        ⚠ conflicts with {conflict}
+                        ⚠ conflicts with your existing booking of "{conflict}"
                       </span>
                     )}
                   </div>

@@ -322,7 +322,7 @@ test('shows conflict warning when a booked event overlaps a listed event', async
 
   await waitFor(() => screen.getByText('Jazz Night'))
   await waitFor(() =>
-    expect(screen.getByText(/conflicts with Already Booked Show/i)).toBeInTheDocument()
+    expect(screen.getByText(/conflicts with your existing booking of "Already Booked Show"/i)).toBeInTheDocument()
   )
 })
 
@@ -356,11 +356,11 @@ test('does not show conflict badge when no events overlap', async () => {
   )
 
   await waitFor(() => screen.getByText('Jazz Night'))
-  expect(screen.queryByText(/conflicts with/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/conflicts with your existing booking/i)).not.toBeInTheDocument()
 })
 
 test('does not show conflict badge for guest users', async () => {
   renderPage() // guest — no orders fetch
   await waitFor(() => screen.getByText('Jazz Night'))
-  expect(screen.queryByText(/conflicts with/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/conflicts with your existing booking/i)).not.toBeInTheDocument()
 })
