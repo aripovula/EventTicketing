@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import type { EventClickArg } from '@fullcalendar/core'
+import type { EventClickArg, EventHoveringArg } from '@fullcalendar/core'
 import { useAuth } from '../context/AuthContext'
 import { EVENT_TYPE_COLORS, EVENT_TYPES, colorForType } from '../utils/eventTypes'
 
@@ -34,6 +34,7 @@ export default function MyCalendarPage() {
   const [orders, setOrders] = useState<OrderWithEvent[]>([])
   const [popup, setPopup] = useState<PopupEvent | null>(null)
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 })
+  const [tooltip, setTooltip] = useState<{ title: string; startTime: string; endTime: string; top: number; left: number } | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -68,6 +69,17 @@ export default function MyCalendarPage() {
       borderColor: colorForType(o.event!.eventType),
       extendedProps: { order: o },
     }))
+
+  function handleEventMouseEnter(arg: EventHoveringArg) {
+    const order = arg.event.extendedProps.order as OrderWithEvent
+    if (!order.event) return
+    const rect = arg.el.getBoundingClientRect()
+    setTooltip({ title: order.event.title, startTime: order.event.startTime, endTime: order.event.endTime, top: rect.top + window.scrollY - 8, left: rect.left + window.scrollX + rect.width / 2 })
+  }
+
+  function handleEventMouseLeave() {
+    setTooltip(null)
+  }
 
   function handleEventClick(arg: EventClickArg) {
     const order = arg.event.extendedProps.order as OrderWithEvent
@@ -105,6 +117,8 @@ export default function MyCalendarPage() {
               initialView="dayGridMonth"
               events={calendarEvents}
               eventClick={handleEventClick}
+              eventMouseEnter={handleEventMouseEnter}
+              eventMouseLeave={handleEventMouseLeave}
               height="auto"
               headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
               eventDisplay="block"
@@ -112,6 +126,22 @@ export default function MyCalendarPage() {
             />
           </div>
         </>
+      )}
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          role="tooltip"
+          className="fixed z-50 pointer-events-none -translate-x-1/2 -translate-y-full bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap"
+          style={{ top: tooltip.top, left: tooltip.left }}
+        >
+          {tooltip.title}
+          {'-'}
+          {new Date(tooltip.startTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
+          {'-'}
+          {new Date(tooltip.endTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
+          <span className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-900" />
+        </div>
       )}
 
       {/* Popup */}

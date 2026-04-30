@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import type { EventClickArg } from '@fullcalendar/core'
+import type { EventClickArg, EventHoveringArg } from '@fullcalendar/core'
 import { EVENT_TYPE_COLORS, EVENT_TYPES, colorForType } from '../utils/eventTypes'
 
 type AdminEvent = {
@@ -24,6 +24,7 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(true)
   const [popup, setPopup] = useState<AdminEvent | null>(null)
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 })
+  const [tooltip, setTooltip] = useState<{ title: string; availableSeats: number; top: number; left: number } | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,6 +53,16 @@ export default function AdminCalendarPage() {
     extendedProps: { event: ev },
   }))
 
+  function handleEventMouseEnter(arg: EventHoveringArg) {
+    const ev = arg.event.extendedProps.event as AdminEvent
+    const rect = arg.el.getBoundingClientRect()
+    setTooltip({ title: ev.title, availableSeats: ev.availableSeats, top: rect.top + window.scrollY - 8, left: rect.left + window.scrollX + rect.width / 2 })
+  }
+
+  function handleEventMouseLeave() {
+    setTooltip(null)
+  }
+
   function handleEventClick(arg: EventClickArg) {
     const ev = arg.event.extendedProps.event as AdminEvent
     const rect = arg.el.getBoundingClientRect()
@@ -64,7 +75,7 @@ export default function AdminCalendarPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+        <div>
           <Link to="/admin" className="text-sm text-cyan-600 hover:text-cyan-800 transition-colors no-underline">
             ← Back to admin
           </Link>
@@ -90,12 +101,27 @@ export default function AdminCalendarPage() {
           initialView="dayGridMonth"
           events={calendarEvents}
           eventClick={handleEventClick}
+          eventMouseEnter={handleEventMouseEnter}
+          eventMouseLeave={handleEventMouseLeave}
           height="auto"
           headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
           eventDisplay="block"
           dayMaxEvents={false}
         />
       </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          role="tooltip"
+          className="fixed z-50 pointer-events-none -translate-x-1/2 -translate-y-full bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap"
+          style={{ top: tooltip.top, left: tooltip.left }}
+        >
+          <span className="font-medium">{tooltip.title}</span>
+          <span className="text-gray-300 ml-2">{tooltip.availableSeats} seats left</span>
+          <span className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-900" />
+        </div>
+      )}
 
       {/* Popup */}
       {popup && (

@@ -5,9 +5,26 @@ import AdminCalendarPage from './AdminCalendarPage'
 
 // FullCalendar renders events by mapping them to DOM; mock it to expose titles simply.
 vi.mock('@fullcalendar/react', () => ({
-  default: ({ events }: { events: Array<{ title: string; extendedProps: unknown }> }) => (
+  default: ({ events, eventMouseEnter, eventMouseLeave }: {
+    events: Array<{ title: string; extendedProps: Record<string, unknown> }>
+    eventMouseEnter?: (arg: unknown) => void
+    eventMouseLeave?: (arg: unknown) => void
+  }) => (
     <div data-testid="fullcalendar">
-      {events.map((e, i) => <div key={i} data-testid="calendar-event">{e.title}</div>)}
+      {events.map((e, i) => (
+        <div
+          key={i}
+          data-testid="calendar-event"
+          onMouseEnter={() => eventMouseEnter?.({
+            event: { extendedProps: e.extendedProps },
+            el: { getBoundingClientRect: () => ({ top: 100, left: 200, width: 80, bottom: 120 }) },
+            jsEvent: {},
+          })}
+          onMouseLeave={() => eventMouseLeave?.({ event: { extendedProps: e.extendedProps }, el: {} })}
+        >
+          {e.title}
+        </div>
+      ))}
     </div>
   ),
 }))
@@ -93,4 +110,35 @@ test('popup is not shown initially', async () => {
   renderPage()
   await waitFor(() => screen.getAllByTestId('calendar-event'))
   expect(screen.queryByRole('heading', { name: 'Jazz Night' })).not.toBeInTheDocument()
+})
+
+// ── Tooltip on hover ───────────────────────────────────────────────────────────
+
+test('tooltip is not shown before hovering', async () => {
+  renderPage()
+  await waitFor(() => screen.getAllByTestId('calendar-event'))
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+})
+
+test('tooltip appears with event name and seats on mouse enter', async () => {
+  const user = userEvent.setup()
+  renderPage()
+  await waitFor(() => screen.getAllByTestId('calendar-event'))
+  const [firstEvent] = screen.getAllByTestId('calendar-event')
+  await user.hover(firstEvent)
+  const tooltip = screen.getByRole('tooltip')
+  expect(tooltip).toBeInTheDocument()
+  expect(tooltip).toHaveTextContent('Jazz Night')
+  expect(tooltip).toHaveTextContent('seats left')
+})
+
+test('tooltip disappears on mouse leave', async () => {
+  const user = userEvent.setup()
+  renderPage()
+  await waitFor(() => screen.getAllByTestId('calendar-event'))
+  const [firstEvent] = screen.getAllByTestId('calendar-event')
+  await user.hover(firstEvent)
+  expect(screen.getByRole('tooltip')).toBeInTheDocument()
+  await user.unhover(firstEvent)
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
 })
