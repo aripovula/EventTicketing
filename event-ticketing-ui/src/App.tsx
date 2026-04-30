@@ -26,9 +26,18 @@ function HeaderNav() {
   if (user) {
     return (
       <nav className="flex items-center gap-4">
-        <Link to="/calendar" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
-          My Calendar
+        <Link to="/" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
+          All Events
         </Link>
+        {user.role === 'admin' ? (
+          <Link to="/admin/calendar" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
+            Events Calendar
+          </Link>
+        ) : (
+          <Link to="/calendar" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
+            My Calendar
+          </Link>
+        )}
         <Link to="/orders" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
           My orders
         </Link>
@@ -52,6 +61,9 @@ function HeaderNav() {
 
   return (
     <nav className="flex items-center gap-4">
+      <Link to="/" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
+        All Events
+      </Link>
       <Link to="/orders" className="text-sm text-gray-500 hover:text-cyan-600 transition-colors">
         My orders
       </Link>

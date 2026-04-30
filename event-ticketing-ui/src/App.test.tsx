@@ -21,7 +21,8 @@ vi.mock('@fullcalendar/react', () => ({ default: () => null }))
 vi.mock('@fullcalendar/daygrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/interaction', () => ({ default: {} }))
 
-const johnUser = { userId: 1, name: 'John Doe', email: 'john@example.com', role: 'user' }
+const johnUser  = { userId: 1, name: 'John Doe',  email: 'john@example.com',  role: 'user'  }
+const adminUser = { userId: 2, name: 'Admin User', email: 'admin@example.com', role: 'admin' }
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -43,6 +44,15 @@ test('guest nav shows Sign in link', async () => {
   stubFetch(null)
   render(<AuthProvider><App /></AuthProvider>)
   await waitFor(() => expect(screen.getByRole('link', { name: /sign in/i })).toBeInTheDocument())
+})
+
+test('guest nav shows All Events link pointing to /', async () => {
+  stubFetch(null)
+  render(<AuthProvider><App /></AuthProvider>)
+  await waitFor(() => screen.getByRole('link', { name: /sign in/i }))
+  const allEvents = screen.getByRole('link', { name: /all events/i })
+  expect(allEvents).toBeInTheDocument()
+  expect(allEvents).toHaveAttribute('href', '/')
 })
 
 test('guest nav does not show My Calendar link', async () => {
@@ -78,6 +88,15 @@ test('My Calendar link appears before My orders in the nav', async () => {
   expect(calendarIdx).toBeLessThan(ordersIdx)
 })
 
+test('logged-in nav shows All Events link pointing to /', async () => {
+  stubFetch(johnUser)
+  render(<AuthProvider><App /></AuthProvider>)
+  await waitFor(() => screen.getByRole('link', { name: /my calendar/i }))
+  const allEvents = screen.getAllByRole('link', { name: /all events/i })[0]
+  expect(allEvents).toBeInTheDocument()
+  expect(allEvents).toHaveAttribute('href', '/')
+})
+
 test('logged-in nav shows My orders, Profile, and Sign out', async () => {
   stubFetch(johnUser)
   render(<AuthProvider><App /></AuthProvider>)
@@ -85,4 +104,20 @@ test('logged-in nav shows My orders, Profile, and Sign out', async () => {
   expect(screen.getByRole('link',   { name: /my orders/i })).toBeInTheDocument()
   expect(screen.getByRole('link',   { name: /profile/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+})
+
+// ── Header nav: admin ──────────────────────────────────────────────────────────
+
+test('admin nav shows Events Calendar link instead of My Calendar', async () => {
+  stubFetch(adminUser)
+  render(<AuthProvider><App /></AuthProvider>)
+  await waitFor(() => expect(screen.getByRole('link', { name: /events calendar/i })).toBeInTheDocument())
+  expect(screen.queryByRole('link', { name: /my calendar/i })).not.toBeInTheDocument()
+})
+
+test('admin Events Calendar link points to /admin/calendar', async () => {
+  stubFetch(adminUser)
+  render(<AuthProvider><App /></AuthProvider>)
+  await waitFor(() => screen.getByRole('link', { name: /events calendar/i }))
+  expect(screen.getByRole('link', { name: /events calendar/i })).toHaveAttribute('href', '/admin/calendar')
 })
