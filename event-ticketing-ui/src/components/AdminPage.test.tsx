@@ -115,3 +115,24 @@ test('Events Calendar link points to /admin/calendar', async () => {
   await waitFor(() => screen.getByText('Jazz Night'))
   expect(screen.getByRole('link', { name: /events calendar/i })).toHaveAttribute('href', '/admin/calendar')
 })
+
+// ── Delete error handling ──────────────────────────────────────────────────────
+
+test('shows error message and keeps event in list when DELETE fails', async () => {
+  const user = userEvent.setup()
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvents) } as Response)
+    .mockResolvedValueOnce(new Response(null, { status: 500 }))
+
+  renderAdminPage()
+  await waitFor(() => screen.getByText('Jazz Night'))
+
+  await user.click(screen.getAllByRole('button', { name: /delete/i })[0])
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^delete$/i }))
+
+  await waitFor(() =>
+    expect(screen.getByText(/failed to delete event/i)).toBeInTheDocument()
+  )
+  expect(screen.getByText('Jazz Night')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})

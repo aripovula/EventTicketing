@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/events')
@@ -21,7 +22,12 @@ export default function AdminPage() {
 
   const handleDeleteConfirmed = async () => {
     if (confirmDeleteId === null) return
-    await fetch(`/api/events/${confirmDeleteId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/events/${confirmDeleteId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      setDeleteError(`Failed to delete event (${res.status}). Please try again.`)
+      setConfirmDeleteId(null)
+      return
+    }
     setEvents(prev => prev.filter(ev => ev.id !== confirmDeleteId))
     setConfirmDeleteId(null)
   }
@@ -59,6 +65,10 @@ export default function AdminPage() {
           </Link>
         </div>
       </div>
+
+      {deleteError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{deleteError}</p>
+      )}
 
       {loading ? (
         <p className="text-gray-500 text-center py-12">Loading...</p>

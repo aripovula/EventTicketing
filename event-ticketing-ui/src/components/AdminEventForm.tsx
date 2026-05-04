@@ -38,11 +38,16 @@ export default function AdminEventForm() {
 
   const [form, setForm] = useState<EventFormData>(emptyForm)
   const [loading, setLoading] = useState(isEdit)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isEdit) return
     fetch(`/api/events/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Failed to load event (${res.status})`)
+        return res.json()
+      })
       .then(data => {
         setForm({
           title: data.title,
@@ -58,6 +63,10 @@ export default function AdminEventForm() {
         })
         setLoading(false)
       })
+      .catch(err => {
+        setLoadError(err.message ?? 'Could not load event.')
+        setLoading(false)
+      })
   }, [id, isEdit])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -70,25 +79,31 @@ export default function AdminEventForm() {
     }))
   }
 
+  const updateEvent = () => fetch(`/api/events/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: Number(id), ...form }),
+  })
+
+  const createEvent = () => fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(form),
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isEdit) {
-      await fetch(`/api/events/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: Number(id), ...form }),
-      })
-    } else {
-      await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+    setSubmitError(null)
+    const res = await (isEdit ? updateEvent() : createEvent())
+    if (!res.ok) {
+      setSubmitError(`Failed to ${isEdit ? 'update' : 'create'} event (${res.status}). Please try again.`)
+      return
     }
     navigate('/admin')
   }
 
   if (loading) return <p className="text-gray-500 text-center py-12">Loading...</p>
+  if (loadError) return <p className="text-center text-red-500 py-12">{loadError}</p>
 
   return (
     <div>
@@ -157,6 +172,10 @@ export default function AdminEventForm() {
               <input id="price" name="price" type="number" min="0" step="0.01" value={form.price} onChange={handleChange} required className={inputClass} />
             </div>
           </div>
+
+          {submitError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button type="submit" className="bg-cyan-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors">

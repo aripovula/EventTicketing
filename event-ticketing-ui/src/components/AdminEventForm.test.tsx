@@ -72,7 +72,7 @@ test('cancel link points to /admin', () => {
 })
 
 test('submitting create form calls POST and navigates to /admin', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve({ id: 3 }) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 3 }) } as Response)
   const user = userEvent.setup()
 
   renderCreateForm()
@@ -97,19 +97,19 @@ test('submitting create form calls POST and navigates to /admin', async () => {
 // Edit mode
 
 test('edit form shows loading state initially', () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
   renderEditForm()
   expect(screen.getByText('Loading...')).toBeInTheDocument()
 })
 
 test('edit form shows Edit event heading after fetch', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
   renderEditForm()
   await waitFor(() => expect(screen.getByRole('heading', { name: /edit event/i })).toBeInTheDocument())
 })
 
 test('edit form pre-populates fields from fetched event', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
   renderEditForm()
   await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Jazz Night'))
   expect(screen.getByLabelText('Venue')).toHaveValue('Blue Note Club')
@@ -117,7 +117,7 @@ test('edit form pre-populates fields from fetched event', async () => {
 })
 
 test('edit form shows image preview when imageUrl is present', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
   renderEditForm()
   await waitFor(() => screen.getByLabelText('Title'))
   const preview = screen.getByRole('img', { name: 'Preview' })
@@ -131,8 +131,8 @@ test('does not show image preview when imageUrl is empty', () => {
 
 test('submitting edit form calls PUT and navigates to /admin', async () => {
   vi.mocked(fetch)
-    .mockResolvedValueOnce({ json: () => Promise.resolve(mockEvent) } as Response)
-    .mockResolvedValueOnce({ json: () => Promise.resolve({}) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) } as Response)
 
   renderEditForm()
   await waitFor(() => screen.getByLabelText('Title'))
@@ -173,7 +173,7 @@ test('Event type dropdown contains expected options', () => {
 })
 
 test('edit form pre-populates startTime and endTime from fetched event', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
   renderEditForm()
   await waitFor(() => screen.getByLabelText('Title'))
   expect((screen.getByLabelText('Start time') as HTMLInputElement).value).toBe('2026-08-15T20:00')
@@ -181,14 +181,14 @@ test('edit form pre-populates startTime and endTime from fetched event', async (
 })
 
 test('edit form pre-populates eventType from fetched event', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve(mockEvent) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
   renderEditForm()
   await waitFor(() => screen.getByLabelText('Title'))
   expect((screen.getByLabelText('Event type') as HTMLSelectElement).value).toBe('Music')
 })
 
 test('submitted create form body includes startTime, endTime, and eventType', async () => {
-  vi.mocked(fetch).mockResolvedValue({ json: () => Promise.resolve({ id: 3 }) } as Response)
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 3 }) } as Response)
   const user = userEvent.setup()
   renderCreateForm()
 
@@ -209,4 +209,49 @@ test('submitted create form body includes startTime, endTime, and eventType', as
     expect(body.endTime).toBe('2026-09-01T22:00')
     expect(body.eventType).toBe('Sports')
   })
+})
+
+// ── Error handling ─────────────────────────────────────────────────────────────
+
+test('edit form shows error message when event fails to load', async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 404 }))
+  renderEditForm()
+  await waitFor(() =>
+    expect(screen.getByText(/failed to load event/i)).toBeInTheDocument()
+  )
+})
+
+test('create form shows error message when POST fails', async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 500 }))
+  const user = userEvent.setup()
+  renderCreateForm()
+
+  await user.type(screen.getByLabelText('Title'), 'New Show')
+  await user.type(screen.getByLabelText('Venue'), 'Arena')
+  await user.type(screen.getByLabelText('Description'), 'Desc.')
+  fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '2026-09-01T10:00' } })
+  fireEvent.change(screen.getByLabelText('End time'),   { target: { value: '2026-09-01T12:00' } })
+
+  fireEvent.submit(screen.getByRole('form', { name: /event form/i }))
+
+  await waitFor(() =>
+    expect(screen.getByText(/failed to create event/i)).toBeInTheDocument()
+  )
+  expect(screen.queryByText('Admin list')).not.toBeInTheDocument()
+})
+
+test('edit form shows error message when PUT fails', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockEvent) } as Response)
+    .mockResolvedValueOnce(new Response(null, { status: 500 }))
+
+  renderEditForm()
+  await waitFor(() => screen.getByLabelText('Title'))
+
+  fireEvent.submit(screen.getByRole('form', { name: /event form/i }))
+
+  await waitFor(() =>
+    expect(screen.getByText(/failed to update event/i)).toBeInTheDocument()
+  )
+  expect(screen.queryByText('Admin list')).not.toBeInTheDocument()
 })
