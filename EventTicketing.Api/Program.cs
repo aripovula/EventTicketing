@@ -43,6 +43,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
 
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials()));
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -53,6 +61,7 @@ using (var scope = app.Services.CreateScope())
     EventTicketing.Api.Data.UserSeeder.Seed(dbContext, config["CardEncryption:Key"]!);
 }
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
