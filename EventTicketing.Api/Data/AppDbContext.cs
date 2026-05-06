@@ -20,6 +20,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(o => o.UserId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<Order>()
+            .HasIndex(o => o.Email);
+
         modelBuilder.Entity<Event>().HasData(
             // ── May 2026 ──────────────────────────────────────────────────────────
             new Event

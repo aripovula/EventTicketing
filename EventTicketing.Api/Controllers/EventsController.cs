@@ -109,9 +109,13 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
     }
 
+    [Authorize]
     [HttpGet("orders")]
-    public async Task<ActionResult<IEnumerable<Order>>> GetOrdersByEmail([FromQuery] string email)
+    public async Task<ActionResult<IEnumerable<Order>>> GetOrdersByEmail([FromQuery] string? email)
     {
+        if (string.IsNullOrWhiteSpace(email))
+            return BadRequest("email is required");
+
         var orders = await db.Orders
             .Where(o => o.Email == email)
             .OrderByDescending(o => o.BookedAt)

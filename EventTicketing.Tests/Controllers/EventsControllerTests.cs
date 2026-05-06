@@ -451,6 +451,20 @@ public class EventsControllerTests : IDisposable
         Assert.True(orders[0].Id > orders[1].Id);
     }
 
+    [Fact]
+    public async Task GetOrdersByEmail_NullEmail_ReturnsBadRequest()
+    {
+        var result = await _controller.GetOrdersByEmail(null);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetOrdersByEmail_EmptyEmail_ReturnsBadRequest()
+    {
+        var result = await _controller.GetOrdersByEmail("   ");
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
     // GET /api/events/orders/{orderId}
 
     [Fact]
@@ -627,13 +641,20 @@ public class EventsControllerTests : IDisposable
     [Theory]
     [InlineData(nameof(EventsController.GetAll))]
     [InlineData(nameof(EventsController.GetById))]
-    [InlineData(nameof(EventsController.GetOrdersByEmail))]
     [InlineData(nameof(EventsController.GetOrderById))]
     public void PublicReadEndpoints_DoNotHaveAuthorizeAttribute(string methodName)
     {
         var method = typeof(EventsController)
             .GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)!;
         Assert.Null(method.GetCustomAttribute<AuthorizeAttribute>());
+    }
+
+    [Fact]
+    public void GetOrdersByEmail_HasAuthorizeAttribute()
+    {
+        var method = typeof(EventsController)
+            .GetMethod(nameof(EventsController.GetOrdersByEmail), BindingFlags.Public | BindingFlags.Instance)!;
+        Assert.NotNull(method.GetCustomAttribute<AuthorizeAttribute>());
     }
 }
 
