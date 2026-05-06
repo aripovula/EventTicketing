@@ -12,6 +12,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // When a user is deleted, null out their orders rather than blocking
+        // the delete or cascade-deleting order history.
+        modelBuilder.Entity<Order>()
+            .HasOne(o => o.User)
+            .WithMany()
+            .HasForeignKey(o => o.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<Event>().HasData(
             // ── May 2026 ──────────────────────────────────────────────────────────
             new Event
