@@ -132,6 +132,14 @@ public class EventsControllerTests : IDisposable
         Assert.True((int)_hub.SentMessages[0].Args[0]! > 0);
     }
 
+    [Fact]
+    public async Task Create_InvalidModel_ReturnsBadRequest()
+    {
+        _controller.ModelState.AddModelError("Title", "Required");
+        var result = await _controller.Create(new Event());
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
     // PUT /api/events/{id}
 
     [Fact]
@@ -242,6 +250,14 @@ public class EventsControllerTests : IDisposable
         await _controller.Delete(999);
 
         Assert.Empty(_hub.SentMessages);
+    }
+
+    [Fact]
+    public async Task Update_InvalidModel_ReturnsBadRequest()
+    {
+        _controller.ModelState.AddModelError("Title", "Required");
+        var result = await _controller.Update(1, new Event { Id = 1 });
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     // POST /api/events/{id}/book

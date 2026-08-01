@@ -30,8 +30,9 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
 
     [Authorize(Roles = "admin")]
     [HttpPost]
-    public async Task<ActionResult<Event>> Create(Event ev)
+    public async Task<ActionResult<Event>> Create([FromBody] Event ev)
     {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
         db.Events.Add(ev);
         await db.SaveChangesAsync();
         await hub.Clients.All.SendAsync("EventCreated", ev.Id);
@@ -40,8 +41,9 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
 
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Event incoming)
+    public async Task<IActionResult> Update(int id, [FromBody] Event incoming)
     {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
         if (id != incoming.Id) return BadRequest();
         var ev = await db.Events.FindAsync(id);
         if (ev is null) return NotFound();
