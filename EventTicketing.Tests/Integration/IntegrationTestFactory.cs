@@ -14,9 +14,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_dbPath}");
-        builder.UseSetting("Jwt:Key",            "integration-test-jwt-secret-key-32chars!");
-        builder.UseSetting("Jwt:Issuer",         "EventTicketing");
-        builder.UseSetting("Jwt:Audience",       "EventTicketingUsers");
+        builder.UseSetting("Jwt:Key", "integration-test-jwt-secret-key-32chars!");
+        builder.UseSetting("Jwt:Issuer", "EventTicketing");
+        builder.UseSetting("Jwt:Audience", "EventTicketingUsers");
         builder.UseSetting("CardEncryption:Key", "integration-test-card-encryption-key!");
     }
 

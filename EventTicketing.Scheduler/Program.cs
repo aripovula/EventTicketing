@@ -41,24 +41,24 @@ string dbPath = args.Length > 0
 // have a booking for Jazz Night see the conflict warning on Blues & Soul Evening.
 var schedules = new Dictionary<int, (TimeSpan Start, TimeSpan End)>
 {
-    [1]  = (new(19,  0, 0), new(22,  0, 0)),  // Jazz Night
-    [30] = (new(20, 30, 0), new(23,  0, 0)),  // Blues & Soul Evening  ← overlaps Jazz Night
-    [2]  = (new( 9,  0, 0), new(18,  0, 0)),  // Tech Conference
-    [3]  = (new(20,  0, 0), new(22, 30, 0)),  // Comedy Showcase
-    [7]  = (new(12,  0, 0), new(20,  0, 0)),  // Food & Wine Festival
-    [8]  = (new(10,  0, 0), new(18,  0, 0)),  // Modern Art Exhibition
-    [13] = (new(19, 30, 0), new(22,  0, 0)),  // Symphony Orchestra
-    [22] = (new(20,  0, 0), new(23,  0, 0)),  // Salsa Dance Night
+    [1] = (new(19, 0, 0), new(22, 0, 0)),  // Jazz Night
+    [30] = (new(20, 30, 0), new(23, 0, 0)),  // Blues & Soul Evening  ← overlaps Jazz Night
+    [2] = (new(9, 0, 0), new(18, 0, 0)),  // Tech Conference
+    [3] = (new(20, 0, 0), new(22, 30, 0)),  // Comedy Showcase
+    [7] = (new(12, 0, 0), new(20, 0, 0)),  // Food & Wine Festival
+    [8] = (new(10, 0, 0), new(18, 0, 0)),  // Modern Art Exhibition
+    [13] = (new(19, 30, 0), new(22, 0, 0)),  // Symphony Orchestra
+    [22] = (new(20, 0, 0), new(23, 0, 0)),  // Salsa Dance Night
 };
 int[] otherIds = [2, 3, 7, 8, 13, 22];
 
 // ── Date distribution ─────────────────────────────────────────────────────────
-var today      = DateTime.Today;
-bool isLate    = today.Day >= 20;
-var tomorrow   = today.AddDays(1);
+var today = DateTime.Today;
+bool isLate = today.Day >= 20;
+var tomorrow = today.AddDays(1);
 var endCurrent = EndOfMonth(today);
-var nextStart  = new DateTime(today.Year, today.Month, 1).AddMonths(1);
-var endNext    = EndOfMonth(nextStart);
+var nextStart = new DateTime(today.Year, today.Month, 1).AddMonths(1);
+var endNext = EndOfMonth(nextStart);
 bool hasDaysLeft = tomorrow <= endCurrent;
 
 DateTime conflictDate;
@@ -68,24 +68,24 @@ if (!isLate && hasDaysLeft)
 {
     // Before 20th: conflict pair + 2 others in current month (4 events),
     //              4 others in next month
-    var cur  = Spread(tomorrow, endCurrent, 3);  // 3 slots: [conflict, other, other]
+    var cur = Spread(tomorrow, endCurrent, 3);  // 3 slots: [conflict, other, other]
     var next = Spread(nextStart, endNext, 4);
     conflictDate = cur[0];
-    otherDates   = [cur[1], cur[2], .. next];
+    otherDates = [cur[1], cur[2], .. next];
 }
 else if (isLate && hasDaysLeft)
 {
     // On/after 20th: conflict pair only in current month (2 events),
     //                6 others in next month
     conflictDate = Spread(tomorrow, endCurrent, 1)[0];
-    otherDates   = Spread(nextStart, endNext, 6);
+    otherDates = Spread(nextStart, endNext, 6);
 }
 else
 {
     // No days left in current month: everything moves to next month
     var next = Spread(nextStart, endNext, 7);  // 7 slots: [conflict, other×6]
     conflictDate = next[0];
-    otherDates   = next[1..];
+    otherDates = next[1..];
 }
 
 // ── Apply updates ─────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ using var conn = new SqliteConnection($"Data Source={dbPath}");
 conn.Open();
 
 // Conflict pair — same date, overlapping times
-UpdateEvent(conn, 1,  conflictDate, schedules[1].Start,  schedules[1].End);
+UpdateEvent(conn, 1, conflictDate, schedules[1].Start, schedules[1].End);
 UpdateEvent(conn, 30, conflictDate, schedules[30].Start, schedules[30].End);
 
 // Other demo events
@@ -126,8 +126,8 @@ static void UpdateEvent(SqliteConnection conn, int id, DateTime date, TimeSpan s
 {
     using var cmd = conn.CreateCommand();
     cmd.CommandText = "UPDATE Events SET StartTime = @s, EndTime = @e WHERE Id = @id";
-    cmd.Parameters.AddWithValue("@s",  date.Add(start).ToString("yyyy-MM-dd HH:mm:ss"));
-    cmd.Parameters.AddWithValue("@e",  date.Add(end).ToString("yyyy-MM-dd HH:mm:ss"));
+    cmd.Parameters.AddWithValue("@s", date.Add(start).ToString("yyyy-MM-dd HH:mm:ss"));
+    cmd.Parameters.AddWithValue("@e", date.Add(end).ToString("yyyy-MM-dd HH:mm:ss"));
     cmd.Parameters.AddWithValue("@id", id);
     cmd.ExecuteNonQuery();
 }

@@ -161,9 +161,15 @@ public class AdminControllerTests : IDisposable
         // Add a fresh event with all seats available, then verify its revenue is zero
         var fresh = new Event
         {
-            Title = "Fresh Event", Description = "D.", StartTime = DateTime.UtcNow,
-            EndTime = DateTime.UtcNow.AddHours(2), EventType = "Other",
-            Venue = "V", TotalSeats = 50, AvailableSeats = 50, Price = 10m
+            Title = "Fresh Event",
+            Description = "D.",
+            StartTime = DateTime.UtcNow,
+            EndTime = DateTime.UtcNow.AddHours(2),
+            EventType = "Other",
+            Venue = "V",
+            TotalSeats = 50,
+            AvailableSeats = 50,
+            Price = 10m
         };
         _db.Events.Add(fresh);
         await _db.SaveChangesAsync();
