@@ -44,12 +44,14 @@ export default function EventList() {
   useEffect(() => { fetchEvents() }, [fetchEvents])
 
   useEffect(() => {
-    if (!user) { setMyBookedEvents([]); return }
+    if (!user) return
     fetch('/api/auth/me/orders')
       .then(res => res.ok ? res.json() : [])
       .then((data: OrderWithEvent[]) => setMyBookedEvents(data))
       .catch(() => {})
   }, [user])
+
+  const displayedBookedEvents = user ? myBookedEvents : []
 
   useHubEvents({ BookingMade: fetchEvents, EventCreated: fetchEvents, EventUpdated: fetchEvents, EventDeleted: fetchEvents })
 
@@ -71,7 +73,7 @@ export default function EventList() {
     .sort((a, b) => sortEvents(a, b))
 
   function conflictingBooking(event: Event): string | null {
-    for (const order of myBookedEvents) {
+    for (const order of displayedBookedEvents) {
       if (!order.event || order.event.id === event.id) continue
       if (overlaps(event.startTime, event.endTime, order.event.startTime, order.event.endTime)) {
         return order.event.title
