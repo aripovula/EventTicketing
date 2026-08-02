@@ -14,13 +14,19 @@ namespace EventTicketing.Api.Controllers;
 [Route("api/[controller]")]
 public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : ControllerBase
 {
+    /// <summary>Returns all events.</summary>
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<Event>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<Event>>> GetAll()
     {
         return Ok(await db.Events.ToListAsync());
     }
 
+    /// <summary>Returns a single event by ID.</summary>
+    /// <param name="id">Event ID.</param>
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(Event), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<Event>> GetById(int id)
     {
         var ev = await db.Events.FindAsync(id);
@@ -28,8 +34,13 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return Ok(ev);
     }
 
+    /// <summary>Creates a new event. Admin only.</summary>
     [Authorize(Roles = "admin")]
     [HttpPost]
+    [ProducesResponseType(typeof(Event), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Event>> Create([FromBody] Event ev)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -39,8 +50,16 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return CreatedAtAction(nameof(GetById), new { id = ev.Id }, ev);
     }
 
+    /// <summary>Updates an existing event. Admin only.</summary>
+    /// <param name="id">Event ID.</param>
+    /// <param name="incoming">Updated event data.</param>
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] Event incoming)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -62,8 +81,14 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return NoContent();
     }
 
+    /// <summary>Deletes an event. Admin only.</summary>
+    /// <param name="id">Event ID.</param>
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
         var ev = await db.Events.FindAsync(id);
@@ -81,7 +106,13 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         public string Email { get; set; } = string.Empty;
     }
 
+    /// <summary>Books a ticket for an event. Authentication optional — email is required either way.</summary>
+    /// <param name="id">Event ID.</param>
+    /// <param name="request">Booking request containing the attendee email.</param>
     [HttpPost("{id}/book")]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Order>> Book(int id, BookRequest request)
     {
         var ev = await db.Events.FindAsync(id);
@@ -111,8 +142,13 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
     }
 
+    /// <summary>Returns all orders for a given email address. Requires authentication.</summary>
+    /// <param name="email">Email address to look up orders for.</param>
     [Authorize]
     [HttpGet("orders")]
+    [ProducesResponseType(typeof(IEnumerable<Order>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<IEnumerable<Order>>> GetOrdersByEmail([FromQuery] string? email)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -125,7 +161,11 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         return Ok(orders);
     }
 
+    /// <summary>Returns a single order by ID.</summary>
+    /// <param name="orderId">Order ID.</param>
     [HttpGet("orders/{orderId}")]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<Order>> GetOrderById(int orderId)
     {
         var order = await db.Orders.FindAsync(orderId);

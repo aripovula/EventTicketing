@@ -28,7 +28,10 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
 
     public record UserInfo(int UserId, string Name, string Email, string Role);
 
+    /// <summary>Authenticates a user and sets an HttpOnly JWT cookie.</summary>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(UserInfo), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<UserInfo>> Login(LoginRequest request)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
@@ -53,8 +56,11 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         return Ok(new UserInfo(user.Id, user.Name, user.Email, user.Role));
     }
 
+    /// <summary>Returns the currently authenticated user's profile.</summary>
     [Authorize]
     [HttpGet("me")]
+    [ProducesResponseType(typeof(UserInfo), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public ActionResult<UserInfo> Me()
     {
         var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -70,8 +76,11 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
 
     public record DefaultCard(string Last4, string CardType, string ExpiryDate);
 
+    /// <summary>Returns all orders belonging to the authenticated user.</summary>
     [Authorize]
     [HttpGet("me/orders")]
+    [ProducesResponseType(typeof(IEnumerable<Order>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<IEnumerable<Order>>> GetMyOrders()
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -98,8 +107,12 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         public string ExpiryDate { get; set; } = string.Empty;
     }
 
+    /// <summary>Saves or updates the authenticated user's default payment card.</summary>
     [Authorize]
     [HttpPut("me/cards/default")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveMyDefaultCard(SaveCardRequest request)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -132,8 +145,12 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         return NoContent();
     }
 
+    /// <summary>Returns the authenticated user's default payment card (last 4 digits, type, expiry).</summary>
     [Authorize]
     [HttpGet("me/cards/default")]
+    [ProducesResponseType(typeof(DefaultCard), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DefaultCard>> GetMyDefaultCard()
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -146,7 +163,9 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
         return Ok(card);
     }
 
+    /// <summary>Clears the auth cookie, logging the user out.</summary>
     [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public IActionResult Logout()
     {
         Response.Cookies.Delete(CookieName);
