@@ -55,7 +55,8 @@ public class AdminPageTests : PageTest
         await Page.GetByLabel("Title").FillAsync(title);
         await Page.GetByLabel("Venue").FillAsync("Test Venue");
         await Page.GetByLabel("Description").FillAsync("Created by Playwright.");
-        await Page.GetByLabel("Date").FillAsync("2026-12-01T19:00");
+        await Page.GetByLabel("Start time").FillAsync("2026-12-01T19:00");
+        await Page.GetByLabel("End time").FillAsync("2026-12-01T22:00");
         await Page.GetByLabel("Total seats").FillAsync("50");
         await Page.GetByLabel("Available seats").FillAsync("50");
         await Page.GetByLabel("Price ($)").FillAsync("30");
@@ -107,7 +108,8 @@ public class AdminPageTests : PageTest
         await Page.GetByLabel("Title").FillAsync(title);
         await Page.GetByLabel("Venue").FillAsync("Nowhere");
         await Page.GetByLabel("Description").FillAsync("Temporary.");
-        await Page.GetByLabel("Date").FillAsync("2026-11-01T10:00");
+        await Page.GetByLabel("Start time").FillAsync("2026-11-01T10:00");
+        await Page.GetByLabel("End time").FillAsync("2026-11-01T12:00");
         await Page.GetByLabel("Total seats").FillAsync("10");
         await Page.GetByLabel("Available seats").FillAsync("10");
         await Page.GetByLabel("Price ($)").FillAsync("1");
