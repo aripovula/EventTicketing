@@ -70,6 +70,8 @@ public class AdminPageTests : PageTest
 
         // Clean up
         await listItems.Last.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
+        var dialog = Page.GetByRole(AriaRole.Dialog);
+        await dialog.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
         await Expect(listItems).ToHaveCountAsync(initialCount);
     }
 
@@ -123,6 +125,8 @@ public class AdminPageTests : PageTest
         var countAfterCreate = await listItems.CountAsync();
 
         await listItems.Last.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
+        var dialog = Page.GetByRole(AriaRole.Dialog);
+        await dialog.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
         await Expect(listItems).ToHaveCountAsync(countAfterCreate - 1);
     }
 }
