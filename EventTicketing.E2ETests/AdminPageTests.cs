@@ -10,6 +10,11 @@ public class AdminPageTests : PageTest
     [SetUp]
     public async Task GoToAdmin()
     {
+        await Page.GotoAsync("http://localhost:5173/login");
+        await Page.GetByLabel("Admin").ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
+        await Page.WaitForURLAsync("http://localhost:5173/");
+
         await Page.GotoAsync("http://localhost:5173/admin");
         await Page.WaitForSelectorAsync("ul[aria-label='admin events'] li");
     }
