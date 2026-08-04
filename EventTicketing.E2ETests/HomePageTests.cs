@@ -38,6 +38,7 @@ public class HomePageTests : PageTest
     }
 
     [Test]
+    [NonParallelizable] // Prevents simultaneous browser-context creation that causes SetUp timeouts in CI
     public async Task SearchInputExpandsOnFocusAndShrinksOnBlur()
     {
         await Page.GotoAsync("http://localhost:5173");

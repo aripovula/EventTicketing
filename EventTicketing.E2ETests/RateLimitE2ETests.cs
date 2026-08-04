@@ -22,8 +22,9 @@ public class RateLimitE2ETests : PlaywrightTest
     {
         _api = await Playwright.APIRequest.NewContextAsync(new()
         {
-            BaseURL = "http://localhost:5001",
-            // Don't follow 3xx — we want raw status codes
+            // Use the Vite dev server (same as all other E2E tests); it proxies
+            // /api/* to the backend, so this works identically in local dev and CI.
+            BaseURL = "http://localhost:5173",
             MaxRedirects = 0,
         });
     }

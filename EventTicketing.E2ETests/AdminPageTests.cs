@@ -94,6 +94,9 @@ public class AdminPageTests : PageTest
             .Locator("li").First
             .GetByRole(AriaRole.Link, new() { Name = "Edit" }).ClickAsync();
 
+        // Wait for the edit form to finish loading before looking for the Cancel link
+        await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Edit event" })).ToBeVisibleAsync();
+
         await Page.GetByRole(AriaRole.Link, new() { Name = "Cancel" }).ClickAsync();
 
         await Expect(Page).ToHaveURLAsync("http://localhost:5173/admin");

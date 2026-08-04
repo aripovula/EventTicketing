@@ -36,6 +36,7 @@ public class EventDetailTests : PageTest
     public async Task BookingModal_ShowsEventDateAndVenue()
     {
         await Page.GotoAsync("http://localhost:5173");
+        await Page.WaitForSelectorAsync("ul[aria-label='events'] li");
         await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
         await Page.WaitForSelectorAsync("button:has-text('Buy ticket')");
 
