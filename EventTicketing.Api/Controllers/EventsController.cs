@@ -5,6 +5,7 @@ using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -109,6 +110,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
     /// <summary>Books a ticket for an event. Authentication optional — email is required either way.</summary>
     /// <param name="id">Event ID.</param>
     /// <param name="request">Booking request containing the attendee email.</param>
+    [EnableRateLimiting("booking")]
     [HttpPost("{id}/book")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

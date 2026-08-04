@@ -672,6 +672,34 @@ public class EventsControllerTests : IDisposable
             .GetMethod(nameof(EventsController.GetOrdersByEmail), BindingFlags.Public | BindingFlags.Instance)!;
         Assert.NotNull(method.GetCustomAttribute<AuthorizeAttribute>());
     }
+
+    // Rate limiting — [EnableRateLimiting("booking")] is enforced by the middleware
+    // pipeline; here we just verify the attribute is wired up on the right action.
+
+    [Fact]
+    public void Book_HasEnableRateLimitingAttribute()
+    {
+        var method = typeof(EventsController)
+            .GetMethod(nameof(EventsController.Book), BindingFlags.Public | BindingFlags.Instance)!;
+        var attr = method.GetCustomAttribute<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>();
+        Assert.NotNull(attr);
+        Assert.Equal("booking", attr.PolicyName);
+    }
+
+    [Theory]
+    [InlineData(nameof(EventsController.GetAll))]
+    [InlineData(nameof(EventsController.GetById))]
+    [InlineData(nameof(EventsController.Create))]
+    [InlineData(nameof(EventsController.Update))]
+    [InlineData(nameof(EventsController.Delete))]
+    [InlineData(nameof(EventsController.GetOrdersByEmail))]
+    [InlineData(nameof(EventsController.GetOrderById))]
+    public void NonBookingActions_DoNotHaveEnableRateLimitingAttribute(string methodName)
+    {
+        var method = typeof(EventsController)
+            .GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)!;
+        Assert.Null(method.GetCustomAttribute<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>());
+    }
 }
 
 // ── SignalR hub stub ──────────────────────────────────────────────────────────
