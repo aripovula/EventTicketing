@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace EventTicketing.E2ETests;
 
-[Parallelizable(ParallelScope.Self)]
 public class AdminPageTests : PageTest
 {
     [SetUp]
@@ -13,9 +12,13 @@ public class AdminPageTests : PageTest
         await Page.GotoAsync("http://localhost:5173/login");
         var adminPanel = Page.Locator("form").Filter(new() { HasText = "Admin" });
         await adminPanel.GetByLabel("Admin").ClickAsync();
+
+        // Wait for the login API response before proceeding — more reliable than
+        // waiting on a React Router pushState navigation in a loaded CI environment.
+        var loginResponse = Page.WaitForResponseAsync(
+            resp => resp.Url.Contains("/api/auth/login"));
         await adminPanel.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
-        await Page.WaitForURLAsync("http://localhost:5173/",
-            new() { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await loginResponse;
 
         await Page.GotoAsync("http://localhost:5173/admin");
         await Page.WaitForSelectorAsync("ul[aria-label='admin events'] li");
@@ -95,8 +98,12 @@ public class AdminPageTests : PageTest
             .Locator("li").First
             .GetByRole(AriaRole.Link, new() { Name = "Edit" }).ClickAsync();
 
-        // Wait for the edit form to finish loading before looking for the Cancel link
-        await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Edit event" })).ToBeVisibleAsync();
+        // Wait for URL then for the heading — the heading only renders after the
+        // event fetch completes, so give it a generous timeout for slow CI runners.
+        await Expect(Page).ToHaveURLAsync(
+            new System.Text.RegularExpressions.Regex("/admin/\\d+/edit"));
+        await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Edit event" }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         await Page.GetByRole(AriaRole.Link, new() { Name = "Cancel" }).ClickAsync();
 

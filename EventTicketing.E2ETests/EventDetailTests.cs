@@ -4,14 +4,19 @@ using NUnit.Framework;
 
 namespace EventTicketing.E2ETests;
 
-[Parallelizable(ParallelScope.Self)]
 public class EventDetailTests : PageTest
 {
+    private async Task GoToJazzNight()
+    {
+        await Page.GotoAsync("http://localhost:5173");
+        await Page.WaitForSelectorAsync("ul[aria-label='events'] li");
+        await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
+    }
+
     [Test]
     public async Task BuyTicketButton_IsVisibleOnEventDetailPage()
     {
-        await Page.GotoAsync("http://localhost:5173");
-        await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
+        await GoToJazzNight();
         await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/events/\\d+"));
 
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Buy ticket" })).ToBeVisibleAsync();
@@ -20,8 +25,7 @@ public class EventDetailTests : PageTest
     [Test]
     public async Task BuyTicketButton_OpensPlaceOrderModal()
     {
-        await Page.GotoAsync("http://localhost:5173");
-        await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
+        await GoToJazzNight();
         await Page.WaitForSelectorAsync("button:has-text('Buy ticket')");
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Buy ticket" }).ClickAsync();
@@ -35,9 +39,7 @@ public class EventDetailTests : PageTest
     [Test]
     public async Task BookingModal_ShowsEventDateAndVenue()
     {
-        await Page.GotoAsync("http://localhost:5173");
-        await Page.WaitForSelectorAsync("ul[aria-label='events'] li");
-        await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
+        await GoToJazzNight();
         await Page.WaitForSelectorAsync("button:has-text('Buy ticket')");
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Buy ticket" }).ClickAsync();
@@ -50,8 +52,7 @@ public class EventDetailTests : PageTest
     [Test]
     public async Task BookingModal_CancelClosesModal()
     {
-        await Page.GotoAsync("http://localhost:5173");
-        await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
+        await GoToJazzNight();
         await Page.WaitForSelectorAsync("button:has-text('Buy ticket')");
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Buy ticket" }).ClickAsync();
@@ -65,8 +66,7 @@ public class EventDetailTests : PageTest
     [Test]
     public async Task BookingModal_ConfirmNavigatesToOrderConfirmation()
     {
-        await Page.GotoAsync("http://localhost:5173");
-        await Page.GetByRole(AriaRole.Link, new() { Name = "Jazz Night" }).ClickAsync();
+        await GoToJazzNight();
         await Page.WaitForSelectorAsync("button:has-text('Buy ticket')");
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Buy ticket" }).ClickAsync();

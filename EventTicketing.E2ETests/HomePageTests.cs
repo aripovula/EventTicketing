@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace EventTicketing.E2ETests;
 
-[Parallelizable(ParallelScope.Self)]
 public class HomePageTests : PageTest
 {
     [Test]
