@@ -14,7 +14,8 @@ public class AdminPageTests : PageTest
         var adminPanel = Page.Locator("form").Filter(new() { HasText = "Admin" });
         await adminPanel.GetByLabel("Admin").ClickAsync();
         await adminPanel.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
-        await Page.WaitForURLAsync("http://localhost:5173/");
+        await Page.WaitForURLAsync("http://localhost:5173/",
+            new() { WaitUntil = WaitUntilState.DOMContentLoaded });
 
         await Page.GotoAsync("http://localhost:5173/admin");
         await Page.WaitForSelectorAsync("ul[aria-label='admin events'] li");
