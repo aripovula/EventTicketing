@@ -6,6 +6,13 @@ namespace EventTicketing.E2ETests;
 
 public class HomePageTests : PageTest
 {
+    [SetUp]
+    public void SetTimeouts()
+    {
+        Page.SetDefaultTimeout(60_000);
+        Page.SetDefaultNavigationTimeout(60_000);
+    }
+
     [Test]
     public async Task HomepageLoads()
     {

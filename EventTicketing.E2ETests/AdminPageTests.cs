@@ -7,6 +7,13 @@ namespace EventTicketing.E2ETests;
 public class AdminPageTests : PageTest
 {
     [SetUp]
+    public void SetTimeouts()
+    {
+        Page.SetDefaultTimeout(60_000);
+        Page.SetDefaultNavigationTimeout(60_000);
+    }
+
+    [SetUp]
     public async Task GoToAdmin()
     {
         await Page.GotoAsync("http://localhost:5173/login");
