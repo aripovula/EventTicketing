@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Models;
@@ -8,19 +9,36 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : ControllerBase
+public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache) : ControllerBase
 {
+    private const string EventsCacheKey = "events:all";
+
+    private static readonly DistributedCacheEntryOptions CacheOptions = new()
+    {
+        // Absolute expiry: the cache entry is evicted after 2 minutes regardless
+        // of how often it is read. This is the safety-net TTL — if invalidation
+        // somehow fails (crash mid-request), stale data disappears on its own.
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
+    };
+
     /// <summary>Returns all events.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<Event>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<Event>>> GetAll()
     {
-        return Ok(await db.Events.ToListAsync());
+        var cached = await cache.GetStringAsync(EventsCacheKey);
+        if (cached is not null)
+            return Ok(JsonSerializer.Deserialize<List<Event>>(cached));
+
+        var events = await db.Events.ToListAsync();
+        await cache.SetStringAsync(EventsCacheKey, JsonSerializer.Serialize(events), CacheOptions);
+        return Ok(events);
     }
 
     /// <summary>Returns a single event by ID.</summary>
@@ -47,6 +65,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         if (!ModelState.IsValid) return BadRequest(ModelState);
         db.Events.Add(ev);
         await db.SaveChangesAsync();
+        await cache.RemoveAsync(EventsCacheKey);
         await hub.Clients.All.SendAsync("EventCreated", ev.Id);
         return CreatedAtAction(nameof(GetById), new { id = ev.Id }, ev);
     }
@@ -78,6 +97,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         ev.ImageUrl = incoming.ImageUrl;
         ev.EventType = incoming.EventType;
         await db.SaveChangesAsync();
+        await cache.RemoveAsync(EventsCacheKey);
         await hub.Clients.All.SendAsync("EventUpdated", id);
         return NoContent();
     }
@@ -96,6 +116,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub) : 
         if (ev is null) return NotFound();
         db.Events.Remove(ev);
         await db.SaveChangesAsync();
+        await cache.RemoveAsync(EventsCacheKey);
         await hub.Clients.All.SendAsync("EventDeleted", id);
         return NoContent();
     }

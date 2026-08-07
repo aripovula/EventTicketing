@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 
 namespace EventTicketing.Tests.Controllers;
 
@@ -34,7 +37,13 @@ public class EventsControllerTests : IDisposable
         _db.Database.EnsureCreated(); // creates schema and applies HasData seeds (Id 1 & 2)
 
         _hub = new FakeHubContext();
-        _controller = new EventsController(_db, _hub);
+
+        // Use the in-memory IDistributedCache implementation so unit tests
+        // run without a real Redis instance while exercising the same code paths.
+        IDistributedCache cache = new MemoryDistributedCache(
+            Options.Create(new MemoryDistributedCacheOptions()));
+
+        _controller = new EventsController(_db, _hub, cache);
     }
 
     public void Dispose()

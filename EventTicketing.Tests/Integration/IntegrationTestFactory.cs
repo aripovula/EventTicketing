@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EventTicketing.Tests.Integration;
 
@@ -18,6 +20,13 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
         builder.UseSetting("Jwt:Issuer", "EventTicketing");
         builder.UseSetting("Jwt:Audience", "EventTicketingUsers");
         builder.UseSetting("CardEncryption:Key", "integration-test-card-encryption-key!");
+
+        builder.ConfigureServices(services =>
+        {
+            // Replace the Redis IDistributedCache registration with an in-memory
+            // one so integration tests run without a Redis instance in CI.
+            services.AddDistributedMemoryCache();
+        });
     }
 
     protected override void Dispose(bool disposing)
