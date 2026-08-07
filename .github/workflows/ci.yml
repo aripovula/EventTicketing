@@ -92,7 +92,10 @@ jobs:
         run: sleep 5 && echo "=== API log ===" && cat api.log || true && echo "=== Vite log ===" && cat event-ticketing-ui/vite.log || true
 
       - name: Wait for servers
-        run: npx wait-on --timeout 60000 tcp:localhost:5017 tcp:localhost:5173
+        run: npx wait-on --timeout 60000 http-get://localhost:5017/health http://localhost:5173
+
+      - name: Warm up API
+        run: curl -sf http://localhost:5017/api/events > /dev/null
 
       - name: Run E2E tests
         run: dotnet test EventTicketing.E2ETests
