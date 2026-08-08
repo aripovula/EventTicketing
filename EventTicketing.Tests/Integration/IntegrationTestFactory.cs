@@ -25,6 +25,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
         {
             // Replace the Redis IDistributedCache registration with an in-memory
             // one so integration tests run without a Redis instance in CI.
+            // RemoveAll first: AddDistributedMemoryCache uses TryAdd and silently
+            // no-ops if IDistributedCache is already registered (e.g. from Redis).
+            services.RemoveAll<IDistributedCache>();
             services.AddDistributedMemoryCache();
         });
     }
