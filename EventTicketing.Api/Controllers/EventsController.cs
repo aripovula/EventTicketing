@@ -165,12 +165,12 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         await hub.Clients.All.SendAsync("BookingMade", id);
 
         await publisher.PublishAsync(new BookingConfirmedMessage(
-            OrderId:    order.Id,
-            EventId:    id,
+            OrderId: order.Id,
+            EventId: id,
             EventTitle: ev.Title,
-            Email:      request.Email,
-            Price:      ev.Price,
-            BookedAt:   order.BookedAt
+            Email: request.Email,
+            Price: ev.Price,
+            BookedAt: order.BookedAt
         ), BookingConfirmedMessage.QueueName);
 
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);

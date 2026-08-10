@@ -105,7 +105,7 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<IConnectionFactory>(_ => new ConnectionFactory
 {
     HostName = builder.Configuration["RabbitMq:Host"] ?? "localhost",
-    Port     = builder.Configuration.GetValue<int>("RabbitMq:Port", 5672),
+    Port = builder.Configuration.GetValue<int>("RabbitMq:Port", 5672),
     UserName = builder.Configuration["RabbitMq:Username"] ?? "guest",
     Password = builder.Configuration["RabbitMq:Password"] ?? "guest",
 });
