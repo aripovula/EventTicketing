@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
+using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache) : ControllerBase
+public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IMessagePublisher publisher) : ControllerBase
 {
     private const string EventsCacheKey = "events:all";
 
@@ -162,6 +163,16 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         }
 
         await hub.Clients.All.SendAsync("BookingMade", id);
+
+        await publisher.PublishAsync(new BookingConfirmedMessage(
+            OrderId:    order.Id,
+            EventId:    id,
+            EventTitle: ev.Title,
+            Email:      request.Email,
+            Price:      ev.Price,
+            BookedAt:   order.BookedAt
+        ), BookingConfirmedMessage.QueueName);
+
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
     }
 

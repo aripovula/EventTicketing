@@ -2,8 +2,10 @@ using System.Text;
 using System.Threading.RateLimiting;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
+using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Middleware;
 using EventTicketing.Api.Services;
+using RabbitMQ.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -99,6 +101,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<IConnectionFactory>(_ => new ConnectionFactory
+{
+    HostName = builder.Configuration["RabbitMq:Host"] ?? "localhost",
+    Port     = builder.Configuration.GetValue<int>("RabbitMq:Port", 5672),
+    UserName = builder.Configuration["RabbitMq:Username"] ?? "guest",
+    Password = builder.Configuration["RabbitMq:Password"] ?? "guest",
+});
+builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+builder.Services.AddHostedService<BookingConfirmationConsumer>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(name: "database", tags: ["ready"]);

@@ -4,7 +4,9 @@ using System.Security.Claims;
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
+using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Models;
+using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +25,7 @@ public class EventsControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly EventsController _controller;
     private readonly FakeHubContext _hub;
+    private readonly FakeMessagePublisher _publisher;
 
     public EventsControllerTests()
     {
@@ -37,13 +40,14 @@ public class EventsControllerTests : IDisposable
         _db.Database.EnsureCreated(); // creates schema and applies HasData seeds (Id 1 & 2)
 
         _hub = new FakeHubContext();
+        _publisher = new FakeMessagePublisher();
 
         // Use the in-memory IDistributedCache implementation so unit tests
         // run without a real Redis instance while exercising the same code paths.
         IDistributedCache cache = new MemoryDistributedCache(
             Options.Create(new MemoryDistributedCacheOptions()));
 
-        _controller = new EventsController(_db, _hub, cache);
+        _controller = new EventsController(_db, _hub, cache, _publisher);
     }
 
     public void Dispose()
@@ -645,6 +649,40 @@ public class EventsControllerTests : IDisposable
         await _controller.Book(1, TestBookRequest);
 
         Assert.Empty(_hub.SentMessages);
+    }
+
+    [Fact]
+    public async Task Book_PublishesBookingConfirmedMessage()
+    {
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Single(_publisher.Published);
+        var item = _publisher.Published[0];
+        Assert.Equal(BookingConfirmedMessage.QueueName, item.QueueName);
+        var msg = Assert.IsType<BookingConfirmedMessage>(item.Message);
+        Assert.Equal(1, msg.EventId);
+        Assert.Equal("test@example.com", msg.Email);
+    }
+
+    [Fact]
+    public async Task Book_NotFound_DoesNotPublishMessage()
+    {
+        await _controller.Book(999, TestBookRequest);
+
+        Assert.Empty(_publisher.Published);
+    }
+
+    [Fact]
+    public async Task Book_SoldOut_DoesNotPublishMessage()
+    {
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 0;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Empty(_publisher.Published);
     }
 
     // Admin-only authorization — verified via reflection because [Authorize] is
