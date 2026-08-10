@@ -68,6 +68,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      rabbitmq:
+        image: rabbitmq:4-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -89,6 +98,7 @@ jobs:
         run: nohup dotnet run --project EventTicketing.Api --no-build > api.log 2>&1 &
         env:
           ASPNETCORE_URLS: http://localhost:5017
+          RabbitMq__Host: localhost
 
       - name: Install frontend deps
         run: npm ci
