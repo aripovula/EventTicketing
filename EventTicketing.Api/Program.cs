@@ -62,6 +62,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         ?? "Data Source=events.db"));
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 
 var redisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
 builder.Services.AddStackExchangeRedisCache(options =>
