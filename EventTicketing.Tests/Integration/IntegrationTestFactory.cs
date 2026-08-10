@@ -1,3 +1,5 @@
+using EventTicketing.Api.Messaging;
+using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +15,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
 {
     private readonly string _dbPath =
         Path.Combine(Path.GetTempPath(), $"et_integration_{Guid.NewGuid()}.db");
+
+    /// <summary>In-memory publisher exposed so tests can assert on published messages.</summary>
+    public FakeMessagePublisher Publisher { get; } = new();
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
@@ -30,6 +35,18 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
             // no-ops if IDistributedCache is already registered (e.g. from Redis).
             services.RemoveAll<IDistributedCache>();
             services.AddDistributedMemoryCache();
+
+            // Replace the real RabbitMQ publisher with an in-memory fake so tests
+            // run without a broker and can assert on published messages.
+            services.RemoveAll<IMessagePublisher>();
+            services.AddSingleton<IMessagePublisher>(Publisher);
+
+            // Remove BookingConfirmationConsumer — it tries to open a RabbitMQ
+            // connection on startup and would fail in CI without the broker.
+            var consumerDescriptor = services.SingleOrDefault(
+                d => d.ImplementationType == typeof(BookingConfirmationConsumer));
+            if (consumerDescriptor is not null)
+                services.Remove(consumerDescriptor);
         });
     }
 
