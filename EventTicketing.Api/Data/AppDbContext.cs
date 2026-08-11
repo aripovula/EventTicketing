@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users => Set<User>();
     public DbSet<Card> Cards => Set<Card>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,6 +24,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Order>()
             .HasIndex(o => o.Email);
+
+        modelBuilder.Entity<IdempotencyKey>()
+            .HasIndex(i => new { i.Key, i.RequestPath })
+            .IsUnique();
 
         modelBuilder.Entity<Event>().HasData(
             // ── May 2026 ──────────────────────────────────────────────────────────
