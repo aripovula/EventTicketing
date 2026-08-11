@@ -187,10 +187,10 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
 
     private Task LogEventAuditAsync(string action, int eventId, string eventTitle)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User?.FindFirstValue(ClaimTypes.NameIdentifier);
         return audit.LogAsync(action, "Event", eventId,
             userId: userId is not null ? int.Parse(userId) : null,
-            userEmail: User.FindFirstValue(ClaimTypes.Email),
+            userEmail: User?.FindFirstValue(ClaimTypes.Email),
             details: eventTitle);
     }
 
