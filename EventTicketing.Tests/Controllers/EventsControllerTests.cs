@@ -6,6 +6,7 @@ using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Models;
+using EventTicketing.Api.Services;
 using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,7 @@ public class EventsControllerTests : IDisposable
     private readonly EventsController _controller;
     private readonly FakeHubContext _hub;
     private readonly FakeMessagePublisher _publisher;
+    private readonly FakeAuditLogger _audit;
 
     public EventsControllerTests()
     {
@@ -41,13 +43,14 @@ public class EventsControllerTests : IDisposable
 
         _hub = new FakeHubContext();
         _publisher = new FakeMessagePublisher();
+        _audit = new FakeAuditLogger();
 
         // Use the in-memory IDistributedCache implementation so unit tests
         // run without a real Redis instance while exercising the same code paths.
         IDistributedCache cache = new MemoryDistributedCache(
             Options.Create(new MemoryDistributedCacheOptions()));
 
-        _controller = new EventsController(_db, _hub, cache, _publisher);
+        _controller = new EventsController(_db, _hub, cache, _publisher, _audit);
     }
 
     public void Dispose()
@@ -683,6 +686,75 @@ public class EventsControllerTests : IDisposable
         await _controller.Book(1, TestBookRequest);
 
         Assert.Empty(_publisher.Published);
+    }
+
+    // Audit logging
+
+    [Fact]
+    public async Task Create_WritesAuditLog()
+    {
+        var newEvent = new Event { Title = "Audit Test", Description = "D", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddHours(1), EventType = "Music", Venue = "V", TotalSeats = 10, AvailableSeats = 10, Price = 5m };
+
+        await _controller.Create(newEvent);
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.EventCreated, _audit.Entries[0].Action);
+        Assert.Equal("Event", _audit.Entries[0].EntityType);
+        Assert.Equal(newEvent.Id, _audit.Entries[0].EntityId);
+    }
+
+    [Fact]
+    public async Task Update_WritesAuditLog()
+    {
+        var updated = new Event { Id = 1, Title = "Jazz Night Updated", Description = "D", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddHours(1), EventType = "Music", Venue = "V", TotalSeats = 100, AvailableSeats = 90, Price = 30m };
+
+        await _controller.Update(1, updated);
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.EventUpdated, _audit.Entries[0].Action);
+        Assert.Equal(1, _audit.Entries[0].EntityId);
+    }
+
+    [Fact]
+    public async Task Delete_WritesAuditLog()
+    {
+        await _controller.Delete(1);
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.EventDeleted, _audit.Entries[0].Action);
+        Assert.Equal(1, _audit.Entries[0].EntityId);
+    }
+
+    [Fact]
+    public async Task Book_WritesAuditLog()
+    {
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.TicketBooked, _audit.Entries[0].Action);
+        Assert.Equal("Order", _audit.Entries[0].EntityType);
+        Assert.Equal("test@example.com", _audit.Entries[0].UserEmail);
+    }
+
+    [Fact]
+    public async Task Book_NotFound_DoesNotWriteAuditLog()
+    {
+        await _controller.Book(999, TestBookRequest);
+
+        Assert.Empty(_audit.Entries);
+    }
+
+    [Fact]
+    public async Task Book_SoldOut_DoesNotWriteAuditLog()
+    {
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 0;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Empty(_audit.Entries);
     }
 
     // Admin-only authorization — verified via reflection because [Authorize] is

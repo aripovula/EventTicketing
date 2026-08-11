@@ -5,6 +5,7 @@ using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Models;
+using EventTicketing.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -16,7 +17,7 @@ namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IMessagePublisher publisher) : ControllerBase
+public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IMessagePublisher publisher, IAuditLogger audit) : ControllerBase
 {
     private const string EventsCacheKey = "events:all";
 
@@ -68,6 +69,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         await db.SaveChangesAsync();
         await cache.RemoveAsync(EventsCacheKey);
         await hub.Clients.All.SendAsync("EventCreated", ev.Id);
+        await LogEventAuditAsync(AuditAction.EventCreated, ev.Id, ev.Title);
         return CreatedAtAction(nameof(GetById), new { id = ev.Id }, ev);
     }
 
@@ -100,6 +102,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         await db.SaveChangesAsync();
         await cache.RemoveAsync(EventsCacheKey);
         await hub.Clients.All.SendAsync("EventUpdated", id);
+        await LogEventAuditAsync(AuditAction.EventUpdated, id, ev.Title);
         return NoContent();
     }
 
@@ -119,6 +122,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         await db.SaveChangesAsync();
         await cache.RemoveAsync(EventsCacheKey);
         await hub.Clients.All.SendAsync("EventDeleted", id);
+        await LogEventAuditAsync(AuditAction.EventDeleted, id, ev.Title);
         return NoContent();
     }
 
@@ -173,7 +177,21 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
             BookedAt: order.BookedAt
         ), BookingConfirmedMessage.QueueName);
 
+        await audit.LogAsync(AuditAction.TicketBooked, "Order", order.Id,
+            userId: order.UserId,
+            userEmail: request.Email,
+            details: ev.Title);
+
         return CreatedAtAction(nameof(GetOrderById), new { orderId = order.Id }, order);
+    }
+
+    private Task LogEventAuditAsync(string action, int eventId, string eventTitle)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return audit.LogAsync(action, "Event", eventId,
+            userId: userId is not null ? int.Parse(userId) : null,
+            userEmail: User.FindFirstValue(ClaimTypes.Email),
+            details: eventTitle);
     }
 
     /// <summary>Returns all orders for a given email address. Requires authentication.</summary>
