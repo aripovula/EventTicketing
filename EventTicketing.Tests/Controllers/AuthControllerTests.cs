@@ -4,6 +4,7 @@ using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
 using EventTicketing.Api.Services;
+using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +20,7 @@ public class AuthControllerTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _db;
     private readonly AuthController _controller;
+    private readonly FakeAuditLogger _audit;
 
     private const string TestPassword = "Password123";
     private const string TestEmail = "alice@example.com";
@@ -45,7 +47,8 @@ public class AuthControllerTests : IDisposable
             .Build();
 
         var env = new FakeWebHostEnvironment(isProduction: false);
-        _controller = new AuthController(_db, new TokenService(config), env);
+        _audit = new FakeAuditLogger();
+        _controller = new AuthController(_db, new TokenService(config), env, _audit);
 
         // Wire up an HttpContext so Response.Cookies is available
         _controller.ControllerContext = new ControllerContext
@@ -181,6 +184,43 @@ public class AuthControllerTests : IDisposable
             new AuthController.LoginRequest { Email = "x@x.com", Password = TestPassword })).Result!;
 
         Assert.Equal(badPassword.Value?.ToString(), badEmail.Value?.ToString());
+    }
+
+    // ── Audit logging ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Login_WithValidCredentials_WritesUserLoggedInAuditEntry()
+    {
+        var seeded = SeedUser();
+        await _controller.Login(new AuthController.LoginRequest { Email = TestEmail, Password = TestPassword });
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.UserLoggedIn, _audit.Entries[0].Action);
+        Assert.Equal(seeded.Id, _audit.Entries[0].UserId);
+        Assert.Equal(TestEmail, _audit.Entries[0].UserEmail);
+    }
+
+    [Fact]
+    public async Task Login_WithUnknownEmail_WritesUserLoginFailedAuditEntry()
+    {
+        await _controller.Login(new AuthController.LoginRequest { Email = "nobody@example.com", Password = TestPassword });
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.UserLoginFailed, _audit.Entries[0].Action);
+        Assert.Equal("nobody@example.com", _audit.Entries[0].UserEmail);
+        Assert.Null(_audit.Entries[0].UserId);
+    }
+
+    [Fact]
+    public async Task Login_WithWrongPassword_WritesUserLoginFailedAuditEntry()
+    {
+        var seeded = SeedUser();
+        await _controller.Login(new AuthController.LoginRequest { Email = TestEmail, Password = "wrong" });
+
+        Assert.Single(_audit.Entries);
+        Assert.Equal(AuditAction.UserLoginFailed, _audit.Entries[0].Action);
+        Assert.Equal(seeded.Id, _audit.Entries[0].UserId);
+        Assert.Equal(TestEmail, _audit.Entries[0].UserEmail);
     }
 
     // ── /me ───────────────────────────────────────────────────────────────────

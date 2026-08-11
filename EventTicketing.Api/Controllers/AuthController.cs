@@ -12,7 +12,7 @@ namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, TokenService tokenService, IWebHostEnvironment env) : ControllerBase
+public class AuthController(AppDbContext db, TokenService tokenService, IWebHostEnvironment env, IAuditLogger audit) : ControllerBase
 {
     public const string CookieName = "auth_token";
 
@@ -36,12 +36,18 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         if (user is null)
+        {
+            await audit.LogAsync(AuditAction.UserLoginFailed, "User", userEmail: request.Email);
             return Unauthorized(new { message = "Invalid email or password." });
+        }
 
         var hasher = new PasswordHasher<Models.User>();
         var result = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
         if (result == PasswordVerificationResult.Failed)
+        {
+            await audit.LogAsync(AuditAction.UserLoginFailed, "User", userId: user.Id, userEmail: user.Email);
             return Unauthorized(new { message = "Invalid email or password." });
+        }
 
         var token = tokenService.Generate(user);
 
@@ -53,6 +59,7 @@ public class AuthController(AppDbContext db, TokenService tokenService, IWebHost
             Expires = DateTimeOffset.UtcNow.AddHours(8),
         });
 
+        await audit.LogAsync(AuditAction.UserLoggedIn, "User", userId: user.Id, userEmail: user.Email);
         return Ok(new UserInfo(user.Id, user.Name, user.Email, user.Role));
     }
 
