@@ -13,6 +13,13 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - [API Endpoints](#api-endpoints)
 - [Authentication & Authorization](#authentication--authorization)
 - [Real-Time Updates (SignalR)](#real-time-updates-signalr)
+- [Caching](#caching)
+- [Rate Limiting](#rate-limiting)
+- [Messaging (RabbitMQ)](#messaging-rabbitmq)
+- [Audit Logging](#audit-logging)
+- [Idempotency](#idempotency)
+- [Structured Logging](#structured-logging)
+- [Correlation IDs](#correlation-ids)
 - [OpenAPI / Swagger](#openapi--swagger)
 - [Health Checks](#health-checks)
 - [Running Locally](#running-locally)
@@ -28,14 +35,17 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 | API | ASP.NET Core 9, C# |
 | ORM | Entity Framework Core 9 |
 | Database | SQLite (local) |
+| Cache | Redis (StackExchange.Redis) |
+| Message broker | RabbitMQ 4 |
 | Auth | JWT Bearer, HttpOnly cookies |
 | Real-time | SignalR |
+| Logging | Serilog (compact JSON) |
 | API Docs | Swashbuckle / OpenAPI 3 |
 | Frontend | React 19, TypeScript, Vite |
 | Styling | Tailwind CSS 4 |
 | Calendar UI | FullCalendar 6 |
-| Unit tests | xUnit |
-| E2E tests | Playwright (NUnit, Java) |
+| Unit tests | xUnit, NSubstitute |
+| E2E tests | Playwright (NUnit) |
 
 ---
 
@@ -61,19 +71,38 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 │  ├── AuthController                 │
 │  └── AdminController                │
 │                                     │
+│  Filters                            │
+│  └── [Idempotent] action filter     │
+│                                     │
 │  Services                           │
 │  ├── TokenService (JWT)             │
-│  └── CardEncryptionService (AES)    │
+│  ├── CardEncryptionService (AES)    │
+│  ├── AuditLogger                    │
+│  └── IdempotencyService             │
+│                                     │
+│  Messaging                          │
+│  ├── RabbitMqPublisher              │
+│  └── BookingConfirmationConsumer    │
 │                                     │
 │  Hubs                               │
 │  └── TicketingHub (SignalR)         │
-└──────────┬──────────────────────────┘
-           │ EF Core
+└──────────┬───────────────┬──────────┘
+           │ EF Core       │ StackExchange.Redis
+           ▼               ▼
+┌──────────────────┐  ┌──────────────────┐
+│ SQLite Database  │  │  Redis Cache     │
+│ Events, Orders,  │  │  events:all      │
+│ Users, Cards,    │  │  (2 min TTL)     │
+│ AuditLogs,       │  └──────────────────┘
+│ IdempotencyKeys  │
+└──────────────────┘
+           │ AMQP
            ▼
-┌─────────────────────────────────────┐
-│       SQLite Database               │
-│  Events, Orders, Users, Cards       │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  RabbitMQ                            │
+│  booking-confirmed queue             │
+│  (durable, at-least-once delivery)   │
+└──────────────────────────────────────┘
 ```
 
 The frontend and API are separate processes during development. In production they can be served from the same host — the API serves static files built from the React app.
@@ -89,15 +118,20 @@ EventTicketing.sln
 ├── EventTicketing.Api/           # ASP.NET Core Web API
 │   ├── Controllers/              # HTTP endpoints
 │   ├── Data/                     # EF Core DbContext + migrations + seeders
+│   ├── Filters/                  # [Idempotent] action filter
 │   ├── Hubs/                     # SignalR hub
+│   ├── Messaging/                # RabbitMQ publisher + consumer
 │   ├── Middleware/               # Correlation ID middleware
 │   ├── Models/                   # EF Core entity classes
-│   ├── Services/                 # TokenService, CardEncryptionService
+│   ├── Services/                 # TokenService, AuditLogger, IdempotencyService, ...
 │   └── Program.cs                # App bootstrap + DI registration
 │
 ├── EventTicketing.Tests/         # xUnit unit + integration tests
 │   ├── Controllers/              # Controller unit tests (in-memory SQLite)
+│   ├── Fakes/                    # In-memory test doubles (publisher, audit logger, ...)
+│   ├── Filters/                  # Action filter unit tests
 │   ├── Integration/              # WebApplicationFactory integration tests
+│   ├── Messaging/                # RabbitMQ publisher + consumer unit tests
 │   └── Services/                 # Service unit tests
 │
 ├── EventTicketing.E2ETests/      # Playwright E2E tests (NUnit)
@@ -135,6 +169,16 @@ Cards           │       email              startTime
   cardType                                 imageUrl
   isDefault                                eventType
 
+AuditLogs                     IdempotencyKeys
+  id                            id
+  action                        key
+  entityType                    requestPath
+  entityId (nullable)           statusCode
+  userId (nullable)             responseBody
+  userEmail (nullable)          createdAt
+  details (nullable JSON)       expiresAt
+  timestamp
+
 * AvailableSeats has a [ConcurrencyCheck] attribute — EF Core uses
   optimistic locking to prevent two simultaneous bookings from
   overselling the last seat.
@@ -164,7 +208,7 @@ Cards           │       email              startTime
 | POST | `/api/events` | Admin | Create event |
 | PUT | `/api/events/{id}` | Admin | Update event |
 | DELETE | `/api/events/{id}` | Admin | Delete event |
-| POST | `/api/events/{id}/book` | Optional | Book a ticket (email required) |
+| POST | `/api/events/{id}/book` | Optional | Book a ticket — supports `Idempotency-Key` header |
 | GET | `/api/events/orders` | Required | Orders by email |
 | GET | `/api/events/orders/{orderId}` | None | Single order detail |
 
@@ -216,6 +260,102 @@ The API hosts a SignalR hub at `/hubs/ticketing`. The frontend connects on page 
 | `EventDeleted` | `eventId` | Admin deletes an event |
 
 When the frontend receives any of these, it re-fetches the affected event so available seat counts and event lists stay current without polling.
+
+---
+
+## Caching
+
+The event listing (`GET /api/events`) is cached in **Redis** with a 2-minute absolute TTL. The cache key is `EventTicketing:events:all`.
+
+The cache is explicitly invalidated whenever an event is created, updated, or deleted, so changes made by admins are visible immediately. The 2-minute TTL is a safety net: if invalidation somehow fails (e.g. a crash mid-request), stale data disappears on its own.
+
+Reads: check Redis first → on miss, query SQLite and populate cache.
+
+In integration tests, Redis is replaced with `IDistributedMemoryCache` so tests run without a Redis instance.
+
+---
+
+## Rate Limiting
+
+Two layers of rate limiting protect the API:
+
+| Limiter | Scope | Limit | Algorithm |
+|---|---|---|---|
+| Global | All endpoints, per IP | 100 requests / minute | Fixed window |
+| Booking | `POST /api/events/{id}/book`, per IP | 5 requests / minute | Sliding window |
+
+The booking-specific limiter uses a sliding window to prevent burst buying at the start of each window. Requests that exceed the limit receive `429 Too Many Requests`.
+
+---
+
+## Messaging (RabbitMQ)
+
+After a ticket is successfully booked, a `BookingConfirmedMessage` is published to the `booking-confirmed` RabbitMQ queue. A `BookingConfirmationConsumer` BackgroundService consumes messages from this queue.
+
+**Design decisions:**
+
+- **Best-effort publishing** — if RabbitMQ is unavailable when a booking is made, the error is logged and the booking still succeeds. The client always receives a `201 Created`.
+- **Durable queue** — the queue survives broker restarts; messages are not lost if the consumer is temporarily offline.
+- **At-least-once delivery** — the consumer uses `autoAck: false` and only acknowledges a message after processing it. If the API crashes mid-processing, the message is redelivered.
+
+The `booking-confirmed` queue is the foundation for future downstream processing (confirmation emails, analytics, fraud detection) — each new consumer subscribes independently without touching the booking code.
+
+In integration tests, `IMessagePublisher` is replaced with an in-memory `FakeMessagePublisher` and the `BookingConfirmationConsumer` hosted service is removed, so tests run without a broker.
+
+---
+
+## Audit Logging
+
+Every significant action is recorded in the `AuditLogs` table via `IAuditLogger`:
+
+| Action | Trigger |
+|---|---|
+| `EventCreated` | Admin creates an event |
+| `EventUpdated` | Admin updates an event |
+| `EventDeleted` | Admin deletes an event |
+| `TicketBooked` | A ticket is booked successfully |
+| `UserLoggedIn` | Successful login |
+| `UserLoginFailed` | Failed login attempt (wrong password or unknown email) |
+
+Each log entry captures: action, entity type, entity ID, user ID (nullable), user email, optional JSON details, and a UTC timestamp. Failed login attempts with an unknown email record the attempted email without a user ID.
+
+---
+
+## Idempotency
+
+The `POST /api/events/{id}/book` endpoint supports an optional `Idempotency-Key` header. When provided:
+
+- The first request is processed normally and the response (status code + body) is stored in the `IdempotencyKeys` table with a **24-hour TTL**.
+- Any subsequent request with the same key and path returns the cached response immediately — no second booking is created, no seats are decremented again.
+- Keys are scoped to `(key, requestPath)` — the same key cannot be reused across different endpoints.
+
+This protects against double bookings caused by network timeouts and client retries. If the header is absent, the request is processed normally with no idempotency guarantees.
+
+### Known limitation — concurrent in-flight requests
+
+The idempotency check is a read-then-write operation: the filter calls `GetAsync`, finds no cached entry, lets the request proceed, then calls `StoreAsync`. If two requests carrying the **same key** arrive simultaneously and both pass the `GetAsync` check before either has written its result, both will create a booking. The `DbUpdateException` thrown by the second `StoreAsync` (the unique index on `(Key, RequestPath)` rejects the duplicate) is swallowed, so the caller gets a correct-looking response — but two orders have been created.
+
+This race window is narrow in practice, but it is a real gap. It will be closed as part of the **Outbox pattern** step, which will add a **database-level unique constraint on `(UserId, EventId)`** (or a pessimistic lock) so the booking itself is atomic regardless of how many in-flight requests slip through the idempotency check.
+
+---
+
+## Structured Logging
+
+All logs are emitted as **compact JSON** via [Serilog](https://serilog.net/), making them easy to ingest into log aggregation systems (Datadog, Elastic, etc.).
+
+Every HTTP request is logged automatically by `UseSerilogRequestLogging()`, including method, path, status code, and elapsed time. Application-level log calls (`LogInformation`, `LogError`, etc.) appear alongside request logs in the same structured format.
+
+---
+
+## Correlation IDs
+
+Every request is assigned a correlation ID, propagated via the `X-Correlation-ID` header. If the client sends the header, the value is reused; otherwise a new UUID is generated.
+
+The correlation ID is:
+- Added to the **response** headers so clients can reference it when reporting issues
+- Added to the **Serilog log context** so every log line emitted during that request includes the ID
+
+This makes it straightforward to trace all log lines belonging to a single request across the application.
 
 ---
 
@@ -289,8 +429,11 @@ curl http://localhost:5017/health/ready
 ## Running Locally
 
 ### Prerequisites
+
 - .NET 9 SDK
 - Node.js 20+
+- Redis (`brew install redis && brew services start redis`)
+- RabbitMQ (`brew install rabbitmq && brew services start rabbitmq`)
 
 ### Backend
 
@@ -314,6 +457,16 @@ npm run dev
 
 The Vite dev server proxies `/api` and `/hubs` requests to `localhost:5017`.
 
+### RabbitMQ Management UI
+
+To monitor queues and messages locally, enable the management plugin once:
+
+```bash
+rabbitmq-plugins enable rabbitmq_management
+brew services restart rabbitmq
+# Management UI: http://localhost:15672 (guest / guest)
+```
+
 ---
 
 ## Testing
@@ -324,7 +477,7 @@ The Vite dev server proxies `/api` and `/hubs` requests to `localhost:5017`.
 dotnet test EventTicketing.Tests
 ```
 
-Covers controllers, services, and integration tests that boot the full app via `WebApplicationFactory` against a temporary SQLite database.
+Covers controllers, services, action filters, and integration tests that boot the full app via `WebApplicationFactory` against a temporary SQLite database. Redis and RabbitMQ are replaced with in-memory fakes so no external services are required.
 
 ### E2E tests (Playwright)
 
