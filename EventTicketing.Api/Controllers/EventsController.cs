@@ -5,6 +5,7 @@ using EventTicketing.Api.Data;
 using EventTicketing.Api.Hubs;
 using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Models;
+using EventTicketing.Api.Filters;
 using EventTicketing.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -136,6 +137,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
     /// <summary>Books a ticket for an event. Authentication optional — email is required either way.</summary>
     /// <param name="id">Event ID.</param>
     /// <param name="request">Booking request containing the attendee email.</param>
+    [Idempotent]
     [EnableRateLimiting("booking")]
     [HttpPost("{id}/book")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
