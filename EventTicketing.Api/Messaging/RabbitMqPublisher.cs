@@ -42,4 +42,27 @@ public class RabbitMqPublisher(IConnectionFactory connectionFactory, ILogger<Rab
                 typeof(T).Name, queueName);
         }
     }
+
+    public async Task PublishRawAsync(string json, string queueName, CancellationToken ct = default)
+    {
+        // No try/catch — the OutboxWorker catches exceptions and records them on the message.
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
+
+        await channel.QueueDeclareAsync(
+            queue: queueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null,
+            cancellationToken: ct);
+
+        var body = Encoding.UTF8.GetBytes(json);
+
+        await channel.BasicPublishAsync(
+            exchange: string.Empty,
+            routingKey: queueName,
+            body: body,
+            cancellationToken: ct);
+    }
 }
