@@ -18,7 +18,7 @@ namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IMessagePublisher publisher, IAuditLogger audit) : ControllerBase
+public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IAuditLogger audit) : ControllerBase
 {
     private const string EventsCacheKey = "events:all";
 
@@ -159,6 +159,21 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
             BookedAt = DateTime.UtcNow,
         };
         db.Orders.Add(order);
+        // Write the outbox message in the same transaction as the order so the
+        // message is never lost even if the app crashes before the worker runs.
+        db.OutboxMessages.Add(new OutboxMessage
+        {
+            Type = nameof(BookingConfirmedMessage),
+            Payload = JsonSerializer.Serialize(new BookingConfirmedMessage(
+                OrderId: order.Id,
+                EventId: id,
+                EventTitle: ev.Title,
+                Email: request.Email,
+                Price: ev.Price,
+                BookedAt: order.BookedAt)),
+            QueueName = BookingConfirmedMessage.QueueName,
+            CreatedAt = DateTime.UtcNow,
+        });
         try
         {
             await db.SaveChangesAsync();
@@ -169,15 +184,6 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         }
 
         await hub.Clients.All.SendAsync("BookingMade", id);
-
-        await publisher.PublishAsync(new BookingConfirmedMessage(
-            OrderId: order.Id,
-            EventId: id,
-            EventTitle: ev.Title,
-            Email: request.Email,
-            Price: ev.Price,
-            BookedAt: order.BookedAt
-        ), BookingConfirmedMessage.QueueName);
 
         await audit.LogAsync(AuditAction.TicketBooked, "Order", order.Id,
             userId: order.UserId,
