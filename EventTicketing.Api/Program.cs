@@ -113,6 +113,7 @@ builder.Services.AddSingleton<IConnectionFactory>(_ => new ConnectionFactory
 });
 builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
 builder.Services.AddHostedService<BookingConfirmationConsumer>();
+builder.Services.AddHostedService<OutboxWorker>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(name: "database", tags: ["ready"]);
