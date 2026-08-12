@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Card> Cards => Set<Card>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<IdempotencyKey>()
             .HasIndex(i => new { i.Key, i.RequestPath })
             .IsUnique();
+
+        // Index on ProcessedAt makes the worker's polling query efficient:
+        // filtering WHERE ProcessedAt IS NULL scans only unprocessed rows.
+        modelBuilder.Entity<OutboxMessage>()
+            .HasIndex(m => m.ProcessedAt);
 
         modelBuilder.Entity<Event>().HasData(
             // ── May 2026 ──────────────────────────────────────────────────────────
