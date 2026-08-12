@@ -41,12 +41,17 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
             services.RemoveAll<IMessagePublisher>();
             services.AddSingleton<IMessagePublisher>(Publisher);
 
-            // Remove BookingConfirmationConsumer — it tries to open a RabbitMQ
-            // connection on startup and would fail in CI without the broker.
+            // Remove background services that try to open a RabbitMQ connection on
+            // startup — they would fail in CI where no broker is running.
             var consumerDescriptor = services.SingleOrDefault(
                 d => d.ImplementationType == typeof(BookingConfirmationConsumer));
             if (consumerDescriptor is not null)
                 services.Remove(consumerDescriptor);
+
+            var workerDescriptor = services.SingleOrDefault(
+                d => d.ImplementationType == typeof(OutboxWorker));
+            if (workerDescriptor is not null)
+                services.Remove(workerDescriptor);
         });
     }
 

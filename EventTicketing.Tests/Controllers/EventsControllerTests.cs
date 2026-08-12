@@ -8,6 +8,7 @@ using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Models;
 using EventTicketing.Api.Services;
 using EventTicketing.Tests.Fakes;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,6 @@ public class EventsControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly EventsController _controller;
     private readonly FakeHubContext _hub;
-    private readonly FakeMessagePublisher _publisher;
     private readonly FakeAuditLogger _audit;
 
     public EventsControllerTests()
@@ -42,7 +42,6 @@ public class EventsControllerTests : IDisposable
         _db.Database.EnsureCreated(); // creates schema and applies HasData seeds (Id 1 & 2)
 
         _hub = new FakeHubContext();
-        _publisher = new FakeMessagePublisher();
         _audit = new FakeAuditLogger();
 
         // Use the in-memory IDistributedCache implementation so unit tests
@@ -50,7 +49,7 @@ public class EventsControllerTests : IDisposable
         IDistributedCache cache = new MemoryDistributedCache(
             Options.Create(new MemoryDistributedCacheOptions()));
 
-        _controller = new EventsController(_db, _hub, cache, _publisher, _audit);
+        _controller = new EventsController(_db, _hub, cache, _audit);
     }
 
     public void Dispose()
@@ -655,28 +654,28 @@ public class EventsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Book_PublishesBookingConfirmedMessage()
+    public async Task Book_WritesOutboxMessageWithCorrectQueueAndPayload()
     {
         await _controller.Book(1, TestBookRequest);
 
-        Assert.Single(_publisher.Published);
-        var item = _publisher.Published[0];
-        Assert.Equal(BookingConfirmedMessage.QueueName, item.QueueName);
-        var msg = Assert.IsType<BookingConfirmedMessage>(item.Message);
-        Assert.Equal(1, msg.EventId);
-        Assert.Equal("test@example.com", msg.Email);
+        var msg = await _db.OutboxMessages.SingleAsync();
+        Assert.Equal(BookingConfirmedMessage.QueueName, msg.QueueName);
+        var payload = JsonSerializer.Deserialize<BookingConfirmedMessage>(msg.Payload,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.Equal(1, payload!.EventId);
+        Assert.Equal("test@example.com", payload.Email);
     }
 
     [Fact]
-    public async Task Book_NotFound_DoesNotPublishMessage()
+    public async Task Book_NotFound_DoesNotWriteOutboxMessage()
     {
         await _controller.Book(999, TestBookRequest);
 
-        Assert.Empty(_publisher.Published);
+        Assert.Empty(await _db.OutboxMessages.ToListAsync());
     }
 
     [Fact]
-    public async Task Book_SoldOut_DoesNotPublishMessage()
+    public async Task Book_SoldOut_DoesNotWriteOutboxMessage()
     {
         var ev = await _db.Events.FindAsync(1);
         ev!.AvailableSeats = 0;
@@ -685,7 +684,7 @@ public class EventsControllerTests : IDisposable
 
         await _controller.Book(1, TestBookRequest);
 
-        Assert.Empty(_publisher.Published);
+        Assert.Empty(await _db.OutboxMessages.ToListAsync());
     }
 
     // Audit logging
