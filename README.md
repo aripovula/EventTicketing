@@ -4,6 +4,36 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 
 ---
 
+## Featured Architectural Improvements on the Event Ticketing app
+
+### Phase 1 — Foundation ✅ Done
+- JWT authentication (HttpOnly cookie — blocks XSS-based token theft)
+- Role-based authorization (user / admin)
+- Real-time updates — SignalR
+- Swashbuckle / OpenAPI spec — auto-generates Swagger interactive docs from code annotations
+- Health check endpoints
+- Structured logging — Serilog + correlation IDs
+- Rate limiting
+
+### Phase 2 — Core additions ✅ Done
+- Redis caching — event listings + seat availability
+- RabbitMQ + BackgroundService — async booking pipeline that decouples confirmation from the request lifecycle
+- Audit logging — bookings + admin actions
+
+### Phase 3 — Advanced 🔄 In progress
+- Idempotency keys ✅ — prevents duplicate bookings on client retries
+- Outbox pattern ✅ — guarantees message delivery survives app crashes
+- Stripe payments ← next
+- Presigned AWS S3 upload URLs — clients upload images directly, bypassing API
+- OpenTelemetry — end-to-end tracing across API → queue → worker
+
+### Phase 4 — Infrastructure ⬜ Planned
+- Polly circuit breaker — wrapping Stripe + S3 calls
+- Azure Key Vault — move JWT / AES / Stripe secrets out of appsettings
+- k6 load test — concurrent seat booking under load
+
+---
+
 ## Table of Contents
 
 - [Tech Stack](#tech-stack)
