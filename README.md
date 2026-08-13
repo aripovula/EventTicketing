@@ -290,17 +290,46 @@ The booking-specific limiter uses a sliding window to prevent burst buying at th
 
 ## Messaging (RabbitMQ)
 
-After a ticket is successfully booked, a `BookingConfirmedMessage` is published to the `booking-confirmed` RabbitMQ queue. A `BookingConfirmationConsumer` BackgroundService consumes messages from this queue.
+After a ticket is successfully booked, a `BookingConfirmedMessage` is published to the `booking-confirmed` RabbitMQ queue via the **outbox pattern** (see [Outbox Pattern](#outbox-pattern) below). A `BookingConfirmationConsumer` BackgroundService consumes messages from this queue.
 
 **Design decisions:**
 
-- **Best-effort publishing** — if RabbitMQ is unavailable when a booking is made, the error is logged and the booking still succeeds. The client always receives a `201 Created`.
 - **Durable queue** — the queue survives broker restarts; messages are not lost if the consumer is temporarily offline.
 - **At-least-once delivery** — the consumer uses `autoAck: false` and only acknowledges a message after processing it. If the API crashes mid-processing, the message is redelivered.
+- **Guaranteed delivery via outbox** — the outbox message is written in the same database transaction as the booking order, so a crash between booking and broker delivery can never cause a silent message loss.
 
 The `booking-confirmed` queue is the foundation for future downstream processing (confirmation emails, analytics, fraud detection) — each new consumer subscribes independently without touching the booking code.
 
-In integration tests, `IMessagePublisher` is replaced with an in-memory `FakeMessagePublisher` and the `BookingConfirmationConsumer` hosted service is removed, so tests run without a broker.
+In integration tests, `IMessagePublisher` is replaced with an in-memory `FakeMessagePublisher` and both the `BookingConfirmationConsumer` and `OutboxWorker` hosted services are removed, so tests run without a broker.
+
+---
+
+## Outbox Pattern
+
+The outbox pattern decouples the booking transaction from the RabbitMQ publish, eliminating the silent message-loss window that existed when the controller called the broker directly.
+
+**How it works:**
+
+1. When `POST /api/events/{id}/book` succeeds, the controller writes both the `Order` row and an `OutboxMessage` row in a **single `SaveChangesAsync` call**. Either both are persisted or neither is — there is no gap where an order exists without a queued message.
+2. `OutboxWorker` (a `BackgroundService`) polls the `OutboxMessages` table every **5 seconds** for rows where `ProcessedAt IS NULL AND Error IS NULL`.
+3. For each pending message the worker calls `IMessagePublisher.PublishRawAsync`, forwarding the stored JSON payload to the correct RabbitMQ queue without re-serialising.
+4. On success the worker sets `ProcessedAt = UTC now`. On failure it writes the exception message to the `Error` column — the message is not retried automatically, enabling manual inspection or a future dead-letter alerting pipeline.
+
+**Why this matters vs the previous direct-publish approach:**
+
+| Scenario | Before (direct publish) | After (outbox) |
+|---|---|---|
+| App crashes after `SaveChangesAsync` but before `PublishAsync` | Message silently lost | Worker dispatches it on next poll |
+| RabbitMQ is temporarily down | Booking succeeds, message dropped | Booking succeeds, message stays pending until broker recovers |
+| Multiple retries of the same booking | Potential duplicate publishes | One outbox row per booking; already-processed rows are skipped |
+
+**Key files:**
+
+| File | Role |
+|---|---|
+| `Models/OutboxMessage.cs` | Entity with `Type`, `Payload`, `QueueName`, `CreatedAt`, `ProcessedAt`, `Error` |
+| `Messaging/OutboxWorker.cs` | Background poller — dispatches pending messages, marks processed or failed |
+| `Messaging/IMessagePublisher.cs` | `PublishRawAsync` method used by the worker to forward pre-serialised JSON |
 
 ---
 
@@ -335,7 +364,7 @@ This protects against double bookings caused by network timeouts and client retr
 
 The idempotency check is a read-then-write operation: the filter calls `GetAsync`, finds no cached entry, lets the request proceed, then calls `StoreAsync`. If two requests carrying the **same key** arrive simultaneously and both pass the `GetAsync` check before either has written its result, both will create a booking. The `DbUpdateException` thrown by the second `StoreAsync` (the unique index on `(Key, RequestPath)` rejects the duplicate) is swallowed, so the caller gets a correct-looking response — but two orders have been created.
 
-This race window is narrow in practice, but it is a real gap. It will be closed as part of the **Outbox pattern** step, which will add a **database-level unique constraint on `(UserId, EventId)`** (or a pessimistic lock) so the booking itself is atomic regardless of how many in-flight requests slip through the idempotency check.
+This race window is narrow in practice, but it is a real gap. A proper fix requires a **database-level unique constraint on `(UserId, EventId)`** or a pessimistic lock so the booking itself is atomic regardless of how many in-flight requests slip through the idempotency check. This is tracked as a future improvement alongside the Stripe payments step.
 
 ---
 
