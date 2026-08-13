@@ -16,6 +16,7 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - [Caching](#caching)
 - [Rate Limiting](#rate-limiting)
 - [Messaging (RabbitMQ)](#messaging-rabbitmq)
+- [Outbox Pattern](#outbox-pattern)
 - [Audit Logging](#audit-logging)
 - [Idempotency](#idempotency)
 - [Structured Logging](#structured-logging)
