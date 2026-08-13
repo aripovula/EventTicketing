@@ -7,7 +7,8 @@ public class OutboxMessage
     public int Id { get; set; }
 
     /// <summary>CLR type name of the message (e.g. "BookingConfirmedMessage"), used for logging.</summary>
-    [Required][MaxLength(200)]
+    [Required]
+    [MaxLength(200)]
     public string Type { get; set; } = string.Empty;
 
     /// <summary>JSON-serialized message payload ready to forward to the broker.</summary>
@@ -15,7 +16,8 @@ public class OutboxMessage
     public string Payload { get; set; } = string.Empty;
 
     /// <summary>Target RabbitMQ queue name.</summary>
-    [Required][MaxLength(200)]
+    [Required]
+    [MaxLength(200)]
     public string QueueName { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
