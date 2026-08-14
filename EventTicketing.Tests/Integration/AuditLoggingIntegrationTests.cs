@@ -48,7 +48,7 @@ public class AuditLoggingIntegrationTests : IDisposable
     [Fact]
     public async Task Book_WritesTicketBookedAuditEntry()
     {
-        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com" });
+        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
         var logs = await GetAuditLogsAsync();
         Assert.Contains(logs, l => l.Action == AuditAction.TicketBooked);
@@ -57,7 +57,7 @@ public class AuditLoggingIntegrationTests : IDisposable
     [Fact]
     public async Task Book_AuditEntryHasCorrectEmailAndEntityType()
     {
-        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "audit@example.com" });
+        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "audit@example.com", PaymentMethodId = "pm_card_visa" });
 
         var logs = await GetAuditLogsAsync();
         var entry = Assert.Single(logs, l => l.Action == AuditAction.TicketBooked);

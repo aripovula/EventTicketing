@@ -24,7 +24,7 @@ public class RateLimitIntegrationTests : IDisposable
     }
 
     private static HttpContent BookingPayload() =>
-        JsonContent.Create(new EventsController.BookRequest { Email = "test@example.com" });
+        JsonContent.Create(new EventsController.BookRequest { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
     // Non-existent event ID keeps the test side-effect-free (no actual booking
     // is created) while still running through the rate-limiting middleware.

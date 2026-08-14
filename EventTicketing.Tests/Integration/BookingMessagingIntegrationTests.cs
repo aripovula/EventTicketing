@@ -36,7 +36,7 @@ public class BookingMessagingIntegrationTests : IDisposable
     [Fact]
     public async Task Book_WritesOneOutboxMessage()
     {
-        var response = await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com" });
+        var response = await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Single(await GetOutboxMessagesAsync());
@@ -45,7 +45,7 @@ public class BookingMessagingIntegrationTests : IDisposable
     [Fact]
     public async Task Book_OutboxMessageIsOnCorrectQueue()
     {
-        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com" });
+        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
         var messages = await GetOutboxMessagesAsync();
         Assert.Equal(BookingConfirmedMessage.QueueName, messages[0].QueueName);
@@ -54,7 +54,7 @@ public class BookingMessagingIntegrationTests : IDisposable
     [Fact]
     public async Task Book_OutboxMessagePayloadHasCorrectEventAndEmail()
     {
-        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com" });
+        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
         var messages = await GetOutboxMessagesAsync();
         var payload = JsonSerializer.Deserialize<BookingConfirmedMessage>(messages[0].Payload,
@@ -66,7 +66,7 @@ public class BookingMessagingIntegrationTests : IDisposable
     [Fact]
     public async Task Book_NotFound_WritesNoOutboxMessage()
     {
-        await _client.PostAsJsonAsync("/api/events/999/book", new { Email = "test@example.com" });
+        await _client.PostAsJsonAsync("/api/events/999/book", new { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
         Assert.Empty(await GetOutboxMessagesAsync());
     }
@@ -82,7 +82,7 @@ public class BookingMessagingIntegrationTests : IDisposable
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var orderCountBefore = await db.Orders.CountAsync();
 
-        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com" });
+        await _client.PostAsJsonAsync("/api/events/1/book", new { Email = "test@example.com", PaymentMethodId = "pm_card_visa" });
 
         db.ChangeTracker.Clear();
         Assert.Equal(orderCountBefore + 1, await db.Orders.CountAsync());

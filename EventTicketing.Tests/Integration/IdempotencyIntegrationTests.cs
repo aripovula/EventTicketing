@@ -29,7 +29,7 @@ public class IdempotencyIntegrationTests : IDisposable
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/events/{eventId}/book")
         {
-            Content = JsonContent.Create(new { Email = email })
+            Content = JsonContent.Create(new { Email = email, PaymentMethodId = "pm_card_visa" })
         };
         if (idempotencyKey is not null)
             request.Headers.Add(IdempotentAttribute.HeaderName, idempotencyKey);

@@ -132,6 +132,14 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         [Required]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Stripe PaymentMethod ID produced by Stripe Elements on the frontend
+        /// (e.g. "pm_card_visa" in test mode). Raw card data is never sent to
+        /// this API — the client tokenizes the card via Stripe.js first.
+        /// </summary>
+        [Required]
+        public string PaymentMethodId { get; set; } = string.Empty;
     }
 
     /// <summary>Books a ticket for an event. Authentication optional — email is required either way.</summary>
@@ -141,6 +149,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
     [EnableRateLimiting("booking")]
     [HttpPost("{id}/book")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status402PaymentRequired)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Order>> Book(int id, BookRequest request)

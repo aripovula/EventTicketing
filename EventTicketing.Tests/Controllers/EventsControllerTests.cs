@@ -603,9 +603,9 @@ public class EventsControllerTests : IDisposable
     // Model validation — BookRequest
 
     [Fact]
-    public void BookRequest_ValidEmail_PassesValidation()
+    public void BookRequest_ValidEmailAndPaymentMethod_PassesValidation()
     {
-        var req = new EventsController.BookRequest { Email = "user@example.com" };
+        var req = new EventsController.BookRequest { Email = "user@example.com", PaymentMethodId = "pm_card_visa" };
 
         Assert.Empty(ValidateModel(req));
     }
@@ -613,7 +613,7 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public void BookRequest_EmptyEmail_FailsValidation()
     {
-        var req = new EventsController.BookRequest { Email = "" };
+        var req = new EventsController.BookRequest { Email = "", PaymentMethodId = "pm_card_visa" };
 
         var results = ValidateModel(req);
 
@@ -623,11 +623,21 @@ public class EventsControllerTests : IDisposable
     [Fact]
     public void BookRequest_InvalidEmailFormat_FailsValidation()
     {
-        var req = new EventsController.BookRequest { Email = "not-an-email" };
+        var req = new EventsController.BookRequest { Email = "not-an-email", PaymentMethodId = "pm_card_visa" };
 
         var results = ValidateModel(req);
 
         Assert.Contains(results, r => r.MemberNames.Contains("Email"));
+    }
+
+    [Fact]
+    public void BookRequest_MissingPaymentMethodId_FailsValidation()
+    {
+        var req = new EventsController.BookRequest { Email = "user@example.com", PaymentMethodId = "" };
+
+        var results = ValidateModel(req);
+
+        Assert.Contains(results, r => r.MemberNames.Contains("PaymentMethodId"));
     }
 
     [Fact]
