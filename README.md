@@ -24,6 +24,8 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - Idempotency keys ✅ — prevents duplicate bookings on client retries
 - Outbox pattern ✅ — guarantees message delivery survives app crashes
 - Stripe payments ← next
+  - Backend: full payment flow using Stripe test API
+  - Frontend: replace raw card fields with Stripe Elements (card tokenized client-side → `pm_*` ID sent to API, raw card data never touches the server)
 - Presigned AWS S3 upload URLs — clients upload images directly, bypassing API
 - OpenTelemetry — end-to-end tracing across API → queue → worker
 
