@@ -6,6 +6,7 @@ using EventTicketing.Api.Messaging;
 using EventTicketing.Api.Middleware;
 using EventTicketing.Api.Services;
 using RabbitMQ.Client;
+using Stripe;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +62,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=events.db"));
 
-builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<EventTicketing.Api.Services.TokenService>();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
 
@@ -103,6 +104,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
+
+// Stripe — PaymentIntentService and RefundService are registered as singletons
+// (they are stateless SDK wrappers). The secret key is read once at startup.
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"] ?? string.Empty;
+builder.Services.AddSingleton<PaymentIntentService>();
+builder.Services.AddSingleton<RefundService>();
+builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
 builder.Services.AddSingleton<IConnectionFactory>(_ => new ConnectionFactory
 {
