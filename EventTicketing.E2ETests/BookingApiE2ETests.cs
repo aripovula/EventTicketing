@@ -29,7 +29,7 @@ public class BookingApiE2ETests
         // response from the full stack confirms both paths executed).
         var response = await _client.PostAsJsonAsync(
             "http://localhost:5017/api/events/1/book",
-            new { Email = "e2e-booking@example.com" });
+            new { Email = "e2e-booking@example.com", PaymentMethodId = "pm_card_visa" });
 
         Assert.That((int)response.StatusCode, Is.EqualTo(201));
     }
@@ -39,7 +39,7 @@ public class BookingApiE2ETests
     {
         var response = await _client.PostAsJsonAsync(
             "http://localhost:5017/api/events/99999/book",
-            new { Email = "e2e-notfound@example.com" });
+            new { Email = "e2e-notfound@example.com", PaymentMethodId = "pm_card_visa" });
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
