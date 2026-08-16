@@ -24,6 +24,14 @@ public class BookingApiE2ETests
     [Test]
     public async Task Book_ViaApi_Returns201Created()
     {
+        // Skip when no Stripe key is configured (e.g. forks or CI runs without
+        // the STRIPE_SECRET_KEY secret). The API returns 402 in that case, which
+        // would be a false failure — not a real regression.
+        Assume.That(
+            Environment.GetEnvironmentVariable("Stripe__SecretKey"),
+            Is.Not.Null.And.Not.Empty,
+            "Stripe__SecretKey is not set — skipping payment E2E test.");
+
         // A 201 proves the booking was persisted and the RabbitMQ publisher
         // ran without crashing the request (it swallows errors, but a healthy
         // response from the full stack confirms both paths executed).

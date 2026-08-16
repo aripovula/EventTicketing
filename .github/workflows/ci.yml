@@ -99,6 +99,7 @@ jobs:
         env:
           ASPNETCORE_URLS: http://localhost:5017
           RabbitMq__Host: localhost
+          Stripe__SecretKey: ${{ secrets.STRIPE_SECRET_KEY }}
 
       - name: Install frontend deps
         run: npm ci
