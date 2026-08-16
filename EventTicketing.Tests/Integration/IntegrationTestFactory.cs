@@ -1,4 +1,5 @@
 using EventTicketing.Api.Messaging;
+using EventTicketing.Api.Services;
 using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
@@ -18,6 +19,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
 
     /// <summary>In-memory publisher exposed so tests can assert on published messages.</summary>
     public FakeMessagePublisher Publisher { get; } = new();
+
+    /// <summary>In-memory payment service exposed so tests can assert on charge/refund calls.</summary>
+    public FakePaymentService Payment { get; } = new();
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
@@ -40,6 +44,11 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
             // run without a broker and can assert on published messages.
             services.RemoveAll<IMessagePublisher>();
             services.AddSingleton<IMessagePublisher>(Publisher);
+
+            // Replace the real Stripe payment service with an in-memory fake so
+            // tests run without a Stripe account or network access.
+            services.RemoveAll<IPaymentService>();
+            services.AddSingleton<IPaymentService>(Payment);
 
             // Remove background services that try to open a RabbitMQ connection on
             // startup — they would fail in CI where no broker is running.

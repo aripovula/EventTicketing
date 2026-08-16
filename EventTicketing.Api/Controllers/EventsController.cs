@@ -18,7 +18,7 @@ namespace EventTicketing.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IAuditLogger audit) : ControllerBase
+public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, IDistributedCache cache, IAuditLogger audit, IPaymentService payment) : ControllerBase
 {
     private const string EventsCacheKey = "events:all";
 
@@ -157,6 +157,29 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         var ev = await db.Events.FindAsync(id);
         if (ev is null) return NotFound();
         if (ev.AvailableSeats == 0) return Conflict();
+
+        // Use the Idempotency-Key header as Stripe's own idempotency key so that
+        // a retry with the same key never results in a second charge. Fall back to
+        // a new GUID for callers that omit the header (guests, simple clients).
+        var idempotencyKey = HttpContext.Request.Headers.TryGetValue(
+            Filters.IdempotentAttribute.HeaderName, out var keyValues)
+            ? keyValues.ToString()
+            : Guid.NewGuid().ToString();
+
+        // Charge the card before touching the database. If Stripe declines, no
+        // order is written and the seat count is not decremented.
+        PaymentResult paymentResult;
+        try
+        {
+            paymentResult = await payment.ChargeAsync(
+                ev.Price, "usd", request.PaymentMethodId, idempotencyKey,
+                HttpContext.RequestAborted);
+        }
+        catch (PaymentException ex)
+        {
+            return StatusCode(StatusCodes.Status402PaymentRequired, new { error = ex.Message });
+        }
+
         ev.AvailableSeats--;
         var userIdClaim = User?.FindFirstValue(ClaimTypes.NameIdentifier);
         var order = new Order
@@ -166,6 +189,7 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
             Email = request.Email,
             Price = ev.Price,
             BookedAt = DateTime.UtcNow,
+            StripePaymentIntentId = paymentResult.PaymentIntentId,
         };
         db.Orders.Add(order);
         // Write the outbox message in the same transaction as the order so the
@@ -189,6 +213,9 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         }
         catch (DbUpdateConcurrencyException)
         {
+            // The seat was taken by a concurrent request. Void the charge so the
+            // customer is not billed for a booking that did not complete.
+            await payment.RefundAsync(paymentResult.PaymentIntentId, HttpContext.RequestAborted);
             return Conflict();
         }
 

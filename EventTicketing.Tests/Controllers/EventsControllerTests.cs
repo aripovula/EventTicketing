@@ -28,6 +28,7 @@ public class EventsControllerTests : IDisposable
     private readonly EventsController _controller;
     private readonly FakeHubContext _hub;
     private readonly FakeAuditLogger _audit;
+    private readonly FakePaymentService _payment;
 
     public EventsControllerTests()
     {
@@ -43,13 +44,20 @@ public class EventsControllerTests : IDisposable
 
         _hub = new FakeHubContext();
         _audit = new FakeAuditLogger();
+        _payment = new FakePaymentService();
 
         // Use the in-memory IDistributedCache implementation so unit tests
         // run without a real Redis instance while exercising the same code paths.
         IDistributedCache cache = new MemoryDistributedCache(
             Options.Create(new MemoryDistributedCacheOptions()));
 
-        _controller = new EventsController(_db, _hub, cache, _audit);
+        _controller = new EventsController(_db, _hub, cache, _audit, _payment)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
     }
 
     public void Dispose()
@@ -277,7 +285,7 @@ public class EventsControllerTests : IDisposable
 
     // POST /api/events/{id}/book
 
-    private static readonly EventsController.BookRequest TestBookRequest = new() { Email = "test@example.com" };
+    private static readonly EventsController.BookRequest TestBookRequest = new() { Email = "test@example.com", PaymentMethodId = "pm_card_visa" };
 
     private void SetAuthenticatedUser(int userId)
     {
