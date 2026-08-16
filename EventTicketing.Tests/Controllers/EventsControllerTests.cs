@@ -705,6 +705,102 @@ public class EventsControllerTests : IDisposable
         Assert.Empty(await _db.OutboxMessages.ToListAsync());
     }
 
+    // Stripe payments
+
+    [Fact]
+    public async Task Book_ChargesStripeWithCorrectAmountAndCurrency()
+    {
+        var ev = await _db.Events.FindAsync(1);
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Single(_payment.ChargeCalls);
+        Assert.Equal(ev!.Price, _payment.ChargeCalls[0].Amount);
+        Assert.Equal("usd", _payment.ChargeCalls[0].Currency);
+    }
+
+    [Fact]
+    public async Task Book_PassesPaymentMethodIdToStripe()
+    {
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Equal("pm_card_visa", _payment.ChargeCalls[0].PaymentMethodId);
+    }
+
+    [Fact]
+    public async Task Book_StoresPaymentIntentIdOnOrder()
+    {
+        _payment.FakePaymentIntentId = "pi_test_abc123";
+
+        await _controller.Book(1, TestBookRequest);
+
+        var order = await _db.Orders.SingleAsync();
+        Assert.Equal("pi_test_abc123", order.StripePaymentIntentId);
+    }
+
+    [Fact]
+    public async Task Book_PaymentFails_Returns402()
+    {
+        _payment.ThrowOnCharge = true;
+
+        var result = await _controller.Book(1, TestBookRequest);
+
+        Assert.Equal(StatusCodes.Status402PaymentRequired, (result.Result as ObjectResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task Book_PaymentFails_DoesNotCreateOrder()
+    {
+        _payment.ThrowOnCharge = true;
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Empty(await _db.Orders.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Book_PaymentFails_DoesNotDecrementSeats()
+    {
+        var seatsBefore = (await _db.Events.FindAsync(1))!.AvailableSeats;
+        _payment.ThrowOnCharge = true;
+
+        await _controller.Book(1, TestBookRequest);
+
+        _db.ChangeTracker.Clear();
+        Assert.Equal(seatsBefore, (await _db.Events.FindAsync(1))!.AvailableSeats);
+    }
+
+    [Fact]
+    public async Task Book_PaymentFails_DoesNotWriteOutboxMessage()
+    {
+        _payment.ThrowOnCharge = true;
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Empty(await _db.OutboxMessages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Book_NotFound_DoesNotChargeStripe()
+    {
+        await _controller.Book(999, TestBookRequest);
+
+        Assert.Empty(_payment.ChargeCalls);
+    }
+
+    [Fact]
+    public async Task Book_SoldOut_DoesNotChargeStripe()
+    {
+        var ev = await _db.Events.FindAsync(1);
+        ev!.AvailableSeats = 0;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        await _controller.Book(1, TestBookRequest);
+
+        Assert.Empty(_payment.ChargeCalls);
+    }
+
     // Audit logging
 
     [Fact]
