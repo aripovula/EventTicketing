@@ -5,6 +5,21 @@ import { vi } from 'vitest'
 import EventDetail from './EventDetail'
 import { AuthProvider } from '../context/AuthContext'
 
+// Mock Stripe so BookingModal (rendered inside EventDetail) can use useStripe /
+// useElements without a real Elements provider or network calls.
+vi.mock('@stripe/react-stripe-js', () => ({
+  CardElement: () => <div data-testid="stripe-card-element" />,
+  useStripe: () => ({
+    createPaymentMethod: vi.fn().mockResolvedValue({
+      paymentMethod: { id: 'pm_test_mock' },
+      error: undefined,
+    }),
+  }),
+  useElements: () => ({
+    getElement: () => ({}),
+  }),
+}))
+
 vi.mock('@microsoft/signalr', () => ({
   HubConnectionBuilder: function () {
     return {
@@ -168,9 +183,7 @@ const mockOrder401 = { ok: false, status: 401, json: () => Promise.resolve(null)
 async function fillAndSubmitModal() {
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
-  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
-  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
-  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
+  // Card details are collected by the mocked Stripe CardElement — no raw inputs exist.
   fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 }
 
@@ -215,9 +228,6 @@ test('shows sold-out error in modal on 409 response', async () => {
   await waitFor(() => screen.getByText('Jazz Night'))
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
-  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
-  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
-  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
   fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 
   await waitFor(() => expect(screen.getByText(/sorry, this event just sold out/i)).toBeInTheDocument())
@@ -234,9 +244,6 @@ test('shows generic error in modal on non-409 booking failure', async () => {
   await waitFor(() => screen.getByText('Jazz Night'))
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
-  fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '1234567890123456' } })
-  fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '12/27' } })
-  fireEvent.change(screen.getByLabelText(/cvv/i), { target: { value: '123' } })
   fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 
   await waitFor(() => expect(screen.getByText(/booking failed/i)).toBeInTheDocument())
@@ -325,7 +332,7 @@ test('shows new card form when logged-in user has no default card', async () => 
   await waitFor(() => {})
   fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
 
-  expect(screen.getByLabelText(/card number/i)).toBeInTheDocument()
+  expect(screen.getByTestId('stripe-card-element')).toBeInTheDocument()
 })
 
 test('email field is empty when user is not logged in', async () => {
