@@ -201,7 +201,7 @@ test('confirming modal posts email to /api/events/:id/book', async () => {
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/events/1/book', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'user@example.com' }),
+    body: JSON.stringify({ email: 'user@example.com', paymentMethodId: 'pm_test_mock' }),
   }))
 })
 
@@ -247,6 +247,22 @@ test('shows generic error in modal on non-409 booking failure', async () => {
   fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
 
   await waitFor(() => expect(screen.getByText(/booking failed/i)).toBeInTheDocument())
+})
+
+test('shows card declined error in modal on 402 response', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(eventRes)
+    .mockResolvedValueOnce(mockOrder401)
+    .mockResolvedValueOnce({ ok: false, status: 402 } as Response)
+
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
+
+  await waitFor(() => expect(screen.getByText(/card was declined/i)).toBeInTheDocument())
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
 })
 
 test('Cancel button closes the modal', async () => {

@@ -83,20 +83,22 @@ export default function EventDetail() {
 
   const soldOut = event.availableSeats === 0
 
-  const handleConfirmBooking = async (email: string, cardLast4: string) => {
+  const handleConfirmBooking = async (email: string, paymentMethodId: string) => {
     setBookingError(null)
     const res = await fetch(`/api/events/${id}/book`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, paymentMethodId }),
     })
     if (res.ok) {
       const order = await res.json()
-      setUserDate({ email, cardLast4 })
+      setUserDate({ email, cardLast4: defaultCardLast4 ?? '' })
       setModalOpen(false)
       navigate(`/orders/${order.id}`)
     } else if (res.status === 409) {
       setBookingError('Sorry, this event just sold out.')
+    } else if (res.status === 402) {
+      setBookingError('Your card was declined. Please try a different card.')
     } else {
       setBookingError('Booking failed. Please try again.')
     }
