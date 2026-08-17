@@ -108,6 +108,8 @@ jobs:
       - name: Start Vite dev server
         run: nohup npm run dev > vite.log 2>&1 &
         working-directory: event-ticketing-ui
+        env:
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
       - name: Print server startup logs
         run: sleep 5 && echo "=== API log ===" && cat api.log || true && echo "=== Vite log ===" && cat event-ticketing-ui/vite.log || true
