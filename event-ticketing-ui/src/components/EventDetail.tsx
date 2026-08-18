@@ -34,6 +34,7 @@ export default function EventDetail() {
   const [bookingError, setBookingError] = useState<string | null>(null)
   const [userData, setUserDate] = useState<User | null>(null)
   const [defaultCardLast4, setDefaultCardLast4] = useState<string | undefined>()
+  const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string | undefined>()
 
   const fetchEvent = useCallback(() => {
     fetch(`/api/events/${id}`)
@@ -66,8 +67,11 @@ export default function EventDetail() {
     if (!user) return
     fetch('/api/auth/me/cards/default')
       .then(res => (res.ok ? res.json() : null))
-      .then((card: { last4: string } | null) => {
-        if (card) setDefaultCardLast4(card.last4)
+      .then((card: { last4: string; paymentMethodId?: string } | null) => {
+        if (card) {
+          setDefaultCardLast4(card.last4)
+          setDefaultPaymentMethodId(card.paymentMethodId)
+        }
       })
       .catch(() => {})
   }, [user])
@@ -157,6 +161,7 @@ export default function EventDetail() {
           eventVenue={event.venue}
           price={event.price}
           savedEmail={userData?.email ?? user?.email}
+          savedPaymentMethodId={defaultPaymentMethodId}
           savedCardLast4={userData?.cardLast4 ?? defaultCardLast4}
           onConfirm={handleConfirmBooking}
           onClose={() => { setModalOpen(false); setBookingError(null) }}

@@ -7,6 +7,7 @@ type Props = {
   eventVenue: string
   price: number
   savedEmail?: string
+  savedPaymentMethodId?: string
   savedCardLast4?: string
   onConfirm: (email: string, paymentMethodId: string) => Promise<void>
   onClose: () => void
@@ -28,7 +29,7 @@ const CARD_ELEMENT_OPTIONS = {
   },
 }
 
-export default function BookingModal({ eventTitle, eventDate, eventVenue, price, savedEmail, savedCardLast4, onConfirm, onClose, error }: Props) {
+export default function BookingModal({ eventTitle, eventDate, eventVenue, price, savedEmail, savedPaymentMethodId, savedCardLast4, onConfirm, onClose, error }: Props) {
   const stripe = useStripe()
   const elements = useElements()
 
@@ -45,6 +46,12 @@ export default function BookingModal({ eventTitle, eventDate, eventVenue, price,
     setSubmitting(true)
 
     try {
+      // Saved card path — re-use the stored PaymentMethod ID without tokenising again.
+      if (cardMode === 'saved' && savedPaymentMethodId) {
+        await onConfirm(email, savedPaymentMethodId)
+        return
+      }
+
       if (!stripe || !elements) {
         setStripeError('Stripe is not ready yet. Please try again.')
         return

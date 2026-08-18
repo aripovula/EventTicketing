@@ -303,7 +303,7 @@ test('modal closes and navigates away on successful booking', async () => {
 // Fetch order when logged in: event → /me (200+user) → /me/cards/default
 
 const johnUser = { userId: 1, name: 'John Doe', email: 'john@example.com', role: 'user' }
-const defaultCard = { last4: '4242', cardType: 'Visa', expiryDate: '12/32' }
+const defaultCard = { last4: '4242', cardType: 'Visa', expiryDate: '12/32', paymentMethodId: 'pm_saved_abc' }
 
 test('pre-fills email from logged-in user when modal opens', async () => {
   vi.mocked(fetch)
@@ -335,6 +335,28 @@ test('shows saved card option in modal when user has a default card', async () =
   await waitFor(() =>
     expect(screen.getByText(/card ending in 4242/i)).toBeInTheDocument()
   )
+})
+
+test('booking with saved card sends stored paymentMethodId in POST body', async () => {
+  const fetchMock = vi.mocked(fetch)
+  fetchMock
+    .mockResolvedValueOnce(eventRes)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(johnUser) } as Response)
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(defaultCard) } as Response)
+    .mockResolvedValueOnce({ ok: true, status: 201, json: () => Promise.resolve(mockOrder) } as Response)
+
+  renderWithRoute('1')
+  await waitFor(() => screen.getByText('Jazz Night'))
+  await waitFor(() => {}) // let /me and /cards/default effects settle
+  fireEvent.click(screen.getByRole('button', { name: /buy ticket/i }))
+  await waitFor(() => screen.getByText(/card ending in 4242/i))
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/events/1/book', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'john@example.com', paymentMethodId: 'pm_saved_abc' }),
+  }))
 })
 
 test('shows new card form when logged-in user has no default card', async () => {

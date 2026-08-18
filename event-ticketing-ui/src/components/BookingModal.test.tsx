@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import BookingModal from './BookingModal'
 
@@ -65,6 +65,15 @@ test('selecting new card radio reveals Stripe card element', () => {
   render(<BookingModal {...baseProps} savedEmail="saved@example.com" savedCardLast4="4242" />)
   fireEvent.click(screen.getByRole('radio', { name: /new card/i }))
   expect(screen.getByTestId('stripe-card-element')).toBeInTheDocument()
+})
+
+test('saved card with savedPaymentMethodId calls onConfirm with stored ID without tokenising', async () => {
+  const onConfirm = vi.fn().mockResolvedValue(undefined)
+  render(<BookingModal {...baseProps} savedCardLast4="4242" savedPaymentMethodId="pm_saved_123" onConfirm={onConfirm} />)
+  fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
+  fireEvent.submit(screen.getByRole('form', { name: /booking form/i }))
+
+  await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('test@example.com', 'pm_saved_123'))
 })
 
 test('shows error alert when error prop is set', () => {
