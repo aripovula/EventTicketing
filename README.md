@@ -23,10 +23,10 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 ### Phase 3 — Advanced 🔄 In progress
 - Idempotency keys ✅ — prevents duplicate bookings on client retries
 - Outbox pattern ✅ — guarantees message delivery survives app crashes
-- Stripe payments ← next
+- Stripe payments ✅
   - Backend: full payment flow using Stripe test API
   - Frontend: replace raw card fields with Stripe Elements (card tokenized client-side → `pm_*` ID sent to API, raw card data never touches the server)
-- Presigned AWS S3 upload URLs — clients upload images directly, bypassing API
+- Presigned AWS S3 upload URLs — clients upload images directly, bypassing API ← next
 - OpenTelemetry — end-to-end tracing across API → queue → worker
 
 ### Phase 4 — Infrastructure ⬜ Planned
@@ -51,6 +51,7 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - [Outbox Pattern](#outbox-pattern)
 - [Audit Logging](#audit-logging)
 - [Idempotency](#idempotency)
+- [Stripe Payments](#stripe-payments)
 - [Structured Logging](#structured-logging)
 - [Correlation IDs](#correlation-ids)
 - [OpenAPI / Swagger](#openapi--swagger)
@@ -401,6 +402,34 @@ This race window is narrow in practice, but it is a real gap. A proper fix requi
 
 ---
 
+## Stripe Payments
+
+### Why card data must never touch our server
+
+When a user types a card number, that raw PAN must be sent directly to Stripe's servers, not ours. If it passes through our API, we fall under **PCI DSS scope**, which requires expensive audits and certifications.
+
+Stripe solves this by rendering the card input inside a **cross-origin iframe** hosted on `stripe.com`. Our JavaScript cannot read what is inside it — the card number never exists in our page's DOM.
+
+### What the two frontend packages do
+
+**`@stripe/stripe-js`** — loads `https://js.stripe.com/v3/` from Stripe's CDN. We must load it this way (from their domain), never bundle it ourselves. It provides `stripe.createPaymentMethod()`, which sends card data to Stripe and returns a safe `pm_…` token.
+
+**`@stripe/react-stripe-js`** — thin React wrapper. Provides:
+- `<Elements>` — context provider that holds the Stripe instance
+- `<CardElement>` — renders the secure iframe so we do not have to manage it ourselves
+- `useStripe()` / `useElements()` — hooks to access the Stripe instance and card element from child components
+
+### Backend payment flow
+
+1. Frontend tokenises the card via Stripe Elements → receives a `pm_…` PaymentMethod ID
+2. `POST /api/events/{id}/book` receives `{ email, paymentMethodId }`
+3. `StripePaymentService.ChargeAsync` calls the Stripe PaymentIntents API (`Confirm=true, OffSession=true`)
+4. On success, the `PaymentIntentId` is stored on the `Order` row
+5. If the database save fails after a successful charge, `RefundAsync` is called automatically (compensation pattern)
+6. The booking `Idempotency-Key` header is forwarded to Stripe as its own idempotency key, preventing double charges on retries
+
+---
+
 ## Structured Logging
 
 All logs are emitted as **compact JSON** via [Serilog](https://serilog.net/), making them easy to ingest into log aggregation systems (Datadog, Elastic, etc.).
@@ -431,7 +460,7 @@ The API ships with a full **OpenAPI 3.0 specification** generated automatically 
 2. `<GenerateDocumentationFile>true</GenerateDocumentationFile>` in the `.csproj` tells the compiler to emit an XML file containing all `/// <summary>` comments from controllers
 3. `options.IncludeXmlComments(xmlPath)` feeds that XML file into Swashbuckle so endpoint descriptions appear in the UI
 4. `[ProducesResponseType]` attributes on each action tell Swashbuckle what HTTP status codes each endpoint can return, which populates the "Responses" section of the spec
-5. A JWT Bearer security scheme is registered so protected endpoints show a padlock icon and you can authenticate directly in the UI
+5. A JWT Bearer security scheme is registered so protected endpoints show a padlock icon and we can authenticate directly in the UI
 
 **Accessing the UI:**
 
