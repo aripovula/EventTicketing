@@ -2,6 +2,15 @@ import { render, screen, waitFor } from '@testing-library/react'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 
+// Stripe mock — BookingModal (rendered inside EventDetail routes) uses useStripe /
+// useElements. Mocking here prevents "no Elements context" errors if any future
+// test navigates to an event detail page.
+vi.mock('@stripe/react-stripe-js', () => ({
+  CardElement: () => null,
+  useStripe: () => ({ createPaymentMethod: vi.fn() }),
+  useElements: () => ({ getElement: () => null }),
+}))
+
 vi.mock('@microsoft/signalr', () => ({
   HubConnectionBuilder: function () {
     return {
