@@ -87,12 +87,18 @@ export default function BookingModal({ eventTitle, eventDate, eventVenue, price,
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
     >
       <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-md mx-4 shadow-lg">
-        <h2 id="booking-modal-title" className="text-xl font-bold text-gray-900 mb-1">
-          Place order
-        </h2>
-        <p className="text-sm text-gray-500 mb-5">
+        <div className="flex items-start justify-between mb-1">
+          <h2 id="booking-modal-title" className="text-xl font-bold text-gray-900">
+            Place order
+          </h2>
+          <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+            Stripe test mode
+          </span>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
           {eventTitle} · {eventVenue} · {formattedDate} &mdash; <span className="font-medium text-gray-700">${price}</span>
         </p>
+
 
         <form onSubmit={handleSubmit} aria-label="booking form" className="space-y-4">
           <div>
@@ -164,6 +170,10 @@ export default function BookingModal({ eventTitle, eventDate, eventVenue, price,
               Cancel
             </button>
           </div>
+
+          <p className="text-xs text-cyan-600 leading-relaxed pt-1">
+            <span className="font-semibold">Stripe test mode</span> — card details go directly to Stripe's servers via a secure cross-origin iframe; raw card data never touches our API (PCI DSS). Use test card <code>4242 4242 4242 4242</code> · any future expiry · any CVV.
+          </p>
         </form>
       </div>
     </div>
