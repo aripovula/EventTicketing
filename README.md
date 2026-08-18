@@ -26,11 +26,11 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - Stripe payments ✅
   - Backend: full payment flow using Stripe test API
   - Frontend: replace raw card fields with Stripe Elements (card tokenized client-side → `pm_*` ID sent to API, raw card data never touches the server)
-- Presigned AWS S3 upload URLs — clients upload images directly, bypassing API ← next
+- Presigned Azure Blob Storage SAS URLs — clients upload images directly, bypassing API ← next
 - OpenTelemetry — end-to-end tracing across API → queue → worker
 
 ### Phase 4 — Infrastructure ⬜ Planned
-- Polly circuit breaker — wrapping Stripe + S3 calls
+- Polly circuit breaker — wrapping Stripe + Azure Blob calls
 - Azure Key Vault — move JWT / AES / Stripe secrets out of appsettings
 - k6 load test — concurrent seat booking under load
 
