@@ -341,3 +341,23 @@ test('shows error alert when Azure PUT fails', async () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/upload failed/i)
   )
 })
+
+test('upload error is cleared when a new file is selected', async () => {
+  const user = userEvent.setup()
+
+  // First upload fails
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500 }))
+
+  renderCreateForm()
+
+  await user.upload(screen.getByLabelText('Image'), new File(['a'], 'bad.jpg', { type: 'image/jpeg' }))
+  await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+
+  // Second upload succeeds — error should disappear
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ uploadUrl: 'https://blob/sas', publicUrl: 'https://blob/ok.jpg' }) } as Response)
+    .mockResolvedValueOnce({ ok: true } as Response)
+
+  await user.upload(screen.getByLabelText('Image'), new File(['b'], 'ok.jpg', { type: 'image/jpeg' }))
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+})

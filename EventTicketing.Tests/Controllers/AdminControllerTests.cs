@@ -1,6 +1,7 @@
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
+using EventTicketing.Api.Services;
 using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -12,6 +13,7 @@ public class AdminControllerTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _db;
+    private readonly FakeBlobService _blob;
     private readonly AdminController _controller;
 
     public AdminControllerTests()
@@ -26,7 +28,8 @@ public class AdminControllerTests : IDisposable
         _db = new AppDbContext(options);
         _db.Database.EnsureCreated();
 
-        _controller = new AdminController(_db, new FakeBlobService());
+        _blob = new FakeBlobService();
+        _controller = new AdminController(_db, _blob);
     }
 
     public void Dispose()
@@ -210,5 +213,35 @@ public class AdminControllerTests : IDisposable
         Assert.Equal("Jazz Night", rows[0].Title);
         Assert.Equal("Blues & Soul Evening", rows[1].Title);
         Assert.Equal("Tech Conference 2026", rows[2].Title);
+    }
+
+    // POST /api/admin/upload/blob-sas-url
+
+    [Fact]
+    public async Task GetBlobSasUrl_ValidRequest_ReturnsOkWithSasResult()
+    {
+        var request = new AdminController.BlobSasRequest
+        {
+            FileName = "banner.jpg",
+            ContentType = "image/jpeg",
+        };
+
+        var result = await _controller.GetBlobSasUrl(request, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var sasResult = Assert.IsType<BlobSasResult>(ok.Value);
+        Assert.Equal(_blob.FakeUploadUrl, sasResult.UploadUrl);
+        Assert.Equal(_blob.FakePublicUrl, sasResult.PublicUrl);
+    }
+
+    [Fact]
+    public async Task GetBlobSasUrl_InvalidModelState_ReturnsBadRequest()
+    {
+        _controller.ModelState.AddModelError("FileName", "The FileName field is required.");
+
+        var result = await _controller.GetBlobSasUrl(
+            new AdminController.BlobSasRequest(), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 }
