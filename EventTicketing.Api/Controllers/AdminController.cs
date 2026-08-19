@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
+using EventTicketing.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +11,7 @@ namespace EventTicketing.Api.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Roles = "admin")]
-public class AdminController(AppDbContext db) : ControllerBase
+public class AdminController(AppDbContext db, IBlobService blob) : ControllerBase
 {
     /// <summary>Returns all orders across all events. Admin only.</summary>
     [HttpGet("orders")]
@@ -23,6 +25,36 @@ public class AdminController(AppDbContext db) : ControllerBase
             .OrderByDescending(o => o.BookedAt)
             .ToListAsync();
         return Ok(orders);
+    }
+
+    public class BlobSasRequest
+    {
+        /// <summary>Original file name (e.g. "banner.jpg"). Used to derive the blob name.</summary>
+        [Required]
+        public string FileName { get; set; } = string.Empty;
+
+        /// <summary>MIME type of the file (e.g. "image/jpeg").</summary>
+        [Required]
+        public string ContentType { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Generates a write-only Azure Blob Storage SAS URL so the browser can upload
+    /// an event image directly to Blob Storage without routing the file through this API.
+    /// Admin only.
+    /// </summary>
+    [HttpPost("upload/blob-sas-url")]
+    [ProducesResponseType(typeof(BlobSasResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<BlobSasResult>> GetBlobSasUrl(
+        [FromBody] BlobSasRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var result = await blob.GenerateUploadSasUrlAsync(request.FileName, request.ContentType, ct);
+        return Ok(result);
     }
 
     public record EventSummary(int EventId, string Title, int OpeningBalance, int SoldSeats, int RemainingSeats, decimal Revenue);

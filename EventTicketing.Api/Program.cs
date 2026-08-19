@@ -112,6 +112,10 @@ builder.Services.AddSingleton<PaymentIntentService>();
 builder.Services.AddSingleton<RefundService>();
 builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 
+// Azure Blob Storage — config via AzureBlob:ConnectionString and AzureBlob:ContainerName
+// in user-secrets / environment variables (no defaults needed in appsettings.json).
+builder.Services.AddScoped<IBlobService, BlobService>();
+
 builder.Services.AddSingleton<IConnectionFactory>(_ => new ConnectionFactory
 {
     HostName = builder.Configuration["RabbitMq:Host"] ?? "localhost",

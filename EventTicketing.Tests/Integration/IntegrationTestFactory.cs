@@ -23,6 +23,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
     /// <summary>In-memory payment service exposed so tests can assert on charge/refund calls.</summary>
     public FakePaymentService Payment { get; } = new();
 
+    /// <summary>In-memory blob service exposed so tests can assert on SAS URL generation calls.</summary>
+    public FakeBlobService Blob { get; } = new();
+
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_dbPath}");
@@ -49,6 +52,11 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, IDisposabl
             // tests run without a Stripe account or network access.
             services.RemoveAll<IPaymentService>();
             services.AddSingleton<IPaymentService>(Payment);
+
+            // Replace the real Azure Blob service with an in-memory fake so
+            // tests run without an Azure storage account or network access.
+            services.RemoveAll<IBlobService>();
+            services.AddSingleton<IBlobService>(Blob);
 
             // Remove background services that try to open a RabbitMQ connection on
             // startup — they would fail in CI where no broker is running.

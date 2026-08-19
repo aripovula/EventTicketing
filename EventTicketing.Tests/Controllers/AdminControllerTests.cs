@@ -1,6 +1,7 @@
 using EventTicketing.Api.Controllers;
 using EventTicketing.Api.Data;
 using EventTicketing.Api.Models;
+using EventTicketing.Tests.Fakes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public class AdminControllerTests : IDisposable
         _db = new AppDbContext(options);
         _db.Database.EnsureCreated();
 
-        _controller = new AdminController(_db);
+        _controller = new AdminController(_db, new FakeBlobService());
     }
 
     public void Dispose()
