@@ -58,7 +58,6 @@ test('create form shows all fields empty', () => {
   renderCreateForm()
   expect(screen.getByLabelText('Title')).toHaveValue('')
   expect(screen.getByLabelText('Venue')).toHaveValue('')
-  expect(screen.getByLabelText('Image URL')).toHaveValue('')
 })
 
 test('create form shows Create event button', () => {
@@ -113,7 +112,6 @@ test('edit form pre-populates fields from fetched event', async () => {
   renderEditForm()
   await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Jazz Night'))
   expect(screen.getByLabelText('Venue')).toHaveValue('Blue Note Club')
-  expect(screen.getByLabelText('Image URL')).toHaveValue('https://images.unsplash.com/photo-123')
 })
 
 test('edit form shows image preview when imageUrl is present', async () => {
@@ -254,4 +252,92 @@ test('edit form shows error message when PUT fails', async () => {
     expect(screen.getByText(/failed to update event/i)).toBeInTheDocument()
   )
   expect(screen.queryByText('Admin list')).not.toBeInTheDocument()
+})
+
+// ── Image file picker ──────────────────────────────────────────────────────────
+
+test('create form renders file picker for image', () => {
+  renderCreateForm()
+  expect(screen.getByLabelText('Image')).toBeInTheDocument()
+  expect(screen.getByLabelText('Image')).toHaveAttribute('type', 'file')
+  expect(screen.getByLabelText('Image')).toHaveAttribute('accept', 'image/*')
+})
+
+test('selecting a file calls SAS endpoint and then PUTs to upload URL', async () => {
+  const uploadUrl = 'https://blob.core.windows.net/events/file?sas=token'
+  const publicUrl = 'https://blob.core.windows.net/events/file'
+
+  vi.mocked(fetch)
+    // SAS request
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ uploadUrl, publicUrl }) } as Response)
+    // Azure PUT
+    .mockResolvedValueOnce({ ok: true } as Response)
+
+  renderCreateForm()
+
+  const file = new File(['img'], 'banner.jpg', { type: 'image/jpeg' })
+  await userEvent.setup().upload(screen.getByLabelText('Image'), file)
+
+  await waitFor(() => {
+    const sasCalls = vi.mocked(fetch).mock.calls.filter(
+      ([url]) => String(url) === '/api/admin/upload/blob-sas-url'
+    )
+    expect(sasCalls).toHaveLength(1)
+    const body = JSON.parse(sasCalls[0][1]!.body as string)
+    expect(body.fileName).toBe('banner.jpg')
+    expect(body.contentType).toBe('image/jpeg')
+  })
+
+  await waitFor(() => {
+    const putCalls = vi.mocked(fetch).mock.calls.filter(
+      ([url]) => String(url) === uploadUrl
+    )
+    expect(putCalls).toHaveLength(1)
+    expect(putCalls[0][1]!.method).toBe('PUT')
+  })
+})
+
+test('after successful upload the image preview shows the public URL', async () => {
+  const publicUrl = 'https://blob.core.windows.net/events/uploaded.jpg'
+
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ uploadUrl: 'https://blob/sas', publicUrl }) } as Response)
+    .mockResolvedValueOnce({ ok: true } as Response)
+
+  renderCreateForm()
+
+  const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' })
+  await userEvent.setup().upload(screen.getByLabelText('Image'), file)
+
+  await waitFor(() =>
+    expect(screen.getByRole('img', { name: 'Preview' })).toHaveAttribute('src', publicUrl)
+  )
+})
+
+test('shows error alert when SAS request fails', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500 }))
+
+  renderCreateForm()
+
+  const file = new File(['img'], 'banner.jpg', { type: 'image/jpeg' })
+  await userEvent.setup().upload(screen.getByLabelText('Image'), file)
+
+  await waitFor(() =>
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not get upload url/i)
+  )
+})
+
+test('shows error alert when Azure PUT fails', async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ uploadUrl: 'https://blob/sas', publicUrl: 'https://blob/file' }) } as Response)
+    .mockResolvedValueOnce(new Response(null, { status: 403 }))
+
+  renderCreateForm()
+
+  const file = new File(['img'], 'banner.jpg', { type: 'image/jpeg' })
+  await userEvent.setup().upload(screen.getByLabelText('Image'), file)
+
+  await waitFor(() =>
+    expect(screen.getByRole('alert')).toHaveTextContent(/upload failed/i)
+  )
 })

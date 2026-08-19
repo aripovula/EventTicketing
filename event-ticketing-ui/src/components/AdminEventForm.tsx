@@ -40,6 +40,8 @@ export default function AdminEventForm() {
   const [loading, setLoading] = useState(isEdit)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isEdit) return
@@ -91,6 +93,41 @@ export default function AdminEventForm() {
     body: JSON.stringify(form),
   })
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setUploadError(null)
+
+    try {
+      const sasRes = await fetch('/api/admin/upload/blob-sas-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
+      })
+      if (!sasRes.ok) throw new Error(`Could not get upload URL (${sasRes.status}). Please try again.`)
+
+      const { uploadUrl, publicUrl } = await sasRes.json()
+
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'x-ms-blob-type': 'BlockBlob',
+          'Content-Type': file.type,
+        },
+        body: file,
+      })
+      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status}). Please try again.`)
+
+      setForm(prev => ({ ...prev, imageUrl: publicUrl }))
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
@@ -134,8 +171,17 @@ export default function AdminEventForm() {
           </div>
 
           <div>
-            <label htmlFor="imageUrl" className={labelClass}>Image URL</label>
-            <input id="imageUrl" name="imageUrl" type="url" value={form.imageUrl} onChange={handleChange} placeholder="https://images.unsplash.com/…" className={inputClass} />
+            <label htmlFor="imageFile" className={labelClass}>Image</label>
+            <input
+              id="imageFile"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={uploading}
+              className={inputClass}
+            />
+            {uploading && <p className="text-sm text-gray-500 mt-1">Uploading…</p>}
+            {uploadError && <p role="alert" className="text-sm text-red-500 mt-1">{uploadError}</p>}
             {form.imageUrl && (
               <img src={form.imageUrl} alt="Preview" className="mt-2 h-32 w-auto rounded-lg object-cover" />
             )}
