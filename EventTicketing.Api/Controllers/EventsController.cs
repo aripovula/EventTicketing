@@ -156,18 +156,43 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
     {
         var ev = await db.Events.FindAsync(id);
         if (ev is null) return NotFound();
-        if (ev.AvailableSeats == 0) return Conflict();
 
-        // Use the Idempotency-Key header as Stripe's own idempotency key so that
-        // a retry with the same key never results in a second charge. Fall back to
-        // a new GUID for callers that omit the header (guests, simple clients).
+        // ── Atomic seat reservation ────────────────────────────────────────────
+        // The naive approach reads AvailableSeats, checks it, then writes the
+        // decrement as three separate steps. Two buyers hitting the last ticket
+        // simultaneously can both pass the "seats > 0" check before either has
+        // written, causing a double-sell.
+        //
+        // The fix: collapse the check and the decrement into one SQL statement.
+        // EF Core's ExecuteUpdateAsync generates:
+        //
+        //   UPDATE Events
+        //   SET    AvailableSeats = AvailableSeats - 1
+        //   WHERE  Id = @id AND AvailableSeats > 0
+        //
+        // The database applies the condition and the write as a single atomic step.
+        // The two concurrent buyers no longer race on a stale in-memory value —
+        // they queue up on the same row. Whoever goes second finds AvailableSeats
+        // already 0, matches 0 rows, and gets a 409 immediately, without ever
+        // reaching Stripe. No double charge, no refund needed.
+        var seatReserved = await db.Events
+            .Where(e => e.Id == id && e.AvailableSeats > 0)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(e => e.AvailableSeats, e => e.AvailableSeats - 1),
+                HttpContext.RequestAborted);
+
+        if (seatReserved == 0)
+            return Conflict();
+
+        // ── Stripe charge ──────────────────────────────────────────────────────
+        // The seat is now reserved in the database. Charge the card next.
+        // If the charge fails, we release the seat before returning so it is
+        // not permanently lost.
         var idempotencyKey = HttpContext.Request.Headers.TryGetValue(
             Filters.IdempotentAttribute.HeaderName, out var keyValues)
             ? keyValues.ToString()
             : Guid.NewGuid().ToString();
 
-        // Charge the card before touching the database. If Stripe declines, no
-        // order is written and the seat count is not decremented.
         PaymentResult paymentResult;
         try
         {
@@ -177,10 +202,16 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         }
         catch (PaymentException ex)
         {
+            // Card declined — undo the reservation so the seat goes back on sale.
+            await db.Events
+                .Where(e => e.Id == id)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(e => e.AvailableSeats, e => e.AvailableSeats + 1));
+
             return StatusCode(StatusCodes.Status402PaymentRequired, new { error = ex.Message });
         }
 
-        ev.AvailableSeats--;
+        // ── Persist order ──────────────────────────────────────────────────────
         var userIdClaim = User?.FindFirstValue(ClaimTypes.NameIdentifier);
         var order = new Order
         {
@@ -211,12 +242,16 @@ public class EventsController(AppDbContext db, IHubContext<TicketingHub> hub, ID
         {
             await db.SaveChangesAsync();
         }
-        catch (DbUpdateConcurrencyException)
+        catch (Exception)
         {
-            // The seat was taken by a concurrent request. Void the charge so the
-            // customer is not billed for a booking that did not complete.
+            // DB write failed after a successful Stripe charge — refund the customer
+            // and release the reserved seat so it is not permanently lost.
             await payment.RefundAsync(paymentResult.PaymentIntentId, HttpContext.RequestAborted);
-            return Conflict();
+            await db.Events
+                .Where(e => e.Id == id)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(e => e.AvailableSeats, e => e.AvailableSeats + 1));
+            throw;
         }
 
         await hub.Clients.All.SendAsync("BookingMade", id);

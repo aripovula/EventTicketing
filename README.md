@@ -51,6 +51,7 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - [Outbox Pattern](#outbox-pattern)
 - [Audit Logging](#audit-logging)
 - [Idempotency](#idempotency)
+- [Atomic Seat Reservation](#atomic-seat-reservation)
 - [Stripe Payments](#stripe-payments)
 - [Azure Blob Storage](#azure-blob-storage)
 - [Structured Logging](#structured-logging)
@@ -410,6 +411,76 @@ This race window is narrow in practice, but it is a real gap. A proper fix requi
 
 ---
 
+## Atomic Seat Reservation ( how last ticket is not sold twice )
+
+### The problem — the race condition
+
+Imagine a concert with **1 ticket left**. Alice and Bob click "Buy" at the exact same moment. The naive approach handles this in three separate steps:
+
+```
+Step 1: READ   → "How many tickets are left?" → 1
+Step 2: CHECK  → "Is that more than zero?"    → yes, proceed
+Step 3: WRITE  → "Set tickets to 0"
+```
+
+Because there is time between the read and the write, both buyers can pass Step 2 before either reaches Step 3:
+
+```
+Alice: READ(1) → CHECK(ok) →                  WRITE(0) ✅
+Bob:   READ(1) → CHECK(ok) →    WRITE(0) ✅              ← same ticket sold twice
+```
+
+This gap between reading and writing is called a **race condition**.
+
+### The fix — move the check inside the write
+
+Instead of three steps, collapse the check and the decrement into **one SQL statement**:
+
+```sql
+UPDATE Events
+SET    AvailableSeats = AvailableSeats - 1
+WHERE  Id = @id AND AvailableSeats > 0
+```
+
+The database applies the condition and the write as a single atomic step. When Alice and Bob arrive simultaneously, the database queues them on the same row:
+
+```
+Alice: UPDATE ... WHERE AvailableSeats > 0  →  1 row updated ✅  (was 1, now 0)
+Bob:   UPDATE ... WHERE AvailableSeats > 0  →  0 rows updated ❌  (already 0, 409 returned)
+```
+
+Bob gets a 409 Conflict **before Stripe is ever called** — no double charge, no refund needed.
+
+### Why the database can do this but application code cannot
+
+When the database executes an `UPDATE`, it takes an **exclusive lock on that row** for the duration of the write. Bob's `UPDATE` cannot start until Alice's finishes, so Bob always sees the result of Alice's write. Application code has no such guarantee — a read and a write are two separate round-trips with nothing preventing another request from running between them.
+
+### How it is implemented
+
+EF Core's `ExecuteUpdateAsync` generates the conditional `UPDATE` directly:
+
+```csharp
+var seatReserved = await db.Events
+    .Where(e => e.Id == id && e.AvailableSeats > 0)
+    .ExecuteUpdateAsync(
+        s => s.SetProperty(e => e.AvailableSeats, e => e.AvailableSeats - 1));
+
+if (seatReserved == 0)
+    return Conflict();  // sold out — Stripe is never called
+```
+
+If the subsequent Stripe charge or database save fails, a compensating `ExecuteUpdateAsync` increments the seat count back so the seat is not permanently lost.
+
+### Booking flow summary
+
+| Step | Action | On failure |
+|---|---|---|
+| 1 | Atomic seat decrement (`WHERE AvailableSeats > 0`) | 0 rows → 409, stop |
+| 2 | Stripe charge | Restore seat → 402 |
+| 3 | Save order + outbox message | Refund Stripe + restore seat → 500 |
+
+---
+
 ## Stripe Payments
 
 ### Why card data must never touch our server
@@ -431,10 +502,12 @@ Stripe solves this by rendering the card input inside a **cross-origin iframe** 
 
 1. Frontend tokenises the card via Stripe Elements → receives a `pm_…` PaymentMethod ID
 2. `POST /api/events/{id}/book` receives `{ email, paymentMethodId }`
-3. `StripePaymentService.ChargeAsync` calls the Stripe PaymentIntents API (`Confirm=true, OffSession=true`)
-4. On success, the `PaymentIntentId` is stored on the `Order` row
-5. If the database save fails after a successful charge, `RefundAsync` is called automatically (compensation pattern)
-6. The booking `Idempotency-Key` header is forwarded to Stripe as its own idempotency key, preventing double charges on retries
+3. The seat is atomically reserved in the database first (see [Atomic Seat Reservation](#atomic-seat-reservation)) — Stripe is only called if a seat was actually available
+4. `StripePaymentService.ChargeAsync` calls the Stripe PaymentIntents API (`Confirm=true, OffSession=true`)
+5. On success, the `PaymentIntentId` is stored on the `Order` row
+6. If the card is declined, the reserved seat is released before returning 402 — no refund needed since the charge never completed
+7. If the database save fails after a successful charge, `RefundAsync` is called and the seat is released (compensation pattern)
+8. The booking `Idempotency-Key` header is forwarded to Stripe as its own idempotency key, preventing double charges on retries
 
 ---
 
