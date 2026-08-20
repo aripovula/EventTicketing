@@ -26,8 +26,8 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - Stripe payments ✅
   - Backend: full payment flow using Stripe test API
   - Frontend: replace raw card fields with Stripe Elements (card tokenized client-side → `pm_*` ID sent to API, raw card data never touches the server)
-- Presigned Azure Blob Storage SAS URLs — clients upload images directly, bypassing API ← next
-- OpenTelemetry — end-to-end tracing across API → queue → worker
+- Presigned Azure Blob Storage SAS URLs ✅ — clients upload images directly to Azure, bypassing the API
+- OpenTelemetry — end-to-end tracing across API → queue → worker ← next
 
 ### Phase 4 — Infrastructure ⬜ Planned
 - Polly circuit breaker — wrapping Stripe + Azure Blob calls
@@ -52,6 +52,7 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 - [Audit Logging](#audit-logging)
 - [Idempotency](#idempotency)
 - [Stripe Payments](#stripe-payments)
+- [Azure Blob Storage](#azure-blob-storage)
 - [Structured Logging](#structured-logging)
 - [Correlation IDs](#correlation-ids)
 - [OpenAPI / Swagger](#openapi--swagger)
@@ -70,6 +71,7 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 | ORM | Entity Framework Core 9 |
 | Database | SQLite (local) |
 | Cache | Redis (StackExchange.Redis) |
+| Blob storage | Azure Blob Storage (`Azure.Storage.Blobs` v12) |
 | Message broker | RabbitMQ 4 |
 | Auth | JWT Bearer, HttpOnly cookies |
 | Real-time | SignalR |
@@ -112,7 +114,9 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 │  ├── TokenService (JWT)             │
 │  ├── CardEncryptionService (AES)    │
 │  ├── AuditLogger                    │
-│  └── IdempotencyService             │
+│  ├── IdempotencyService             │
+│  ├── StripePaymentService           │
+│  └── BlobService (SAS URLs)        │
 │                                     │
 │  Messaging                          │
 │  ├── RabbitMqPublisher              │
@@ -137,6 +141,9 @@ A full-stack event ticketing platform where users browse and book tickets for ev
 │  booking-confirmed queue             │
 │  (durable, at-least-once delivery)   │
 └──────────────────────────────────────┘
+
+           Browser ──PUT (file)──▶ Azure Blob Storage
+           (SAS URL issued by API; file never passes through API)
 ```
 
 The frontend and API are separate processes during development. In production they can be served from the same host — the API serves static files built from the React app.
@@ -252,6 +259,7 @@ AuditLogs                     IdempotencyKeys
 |---|---|---|---|
 | GET | `/api/admin/orders` | Admin | All orders across all events |
 | GET | `/api/admin/summary` | Admin | Revenue and seat summary per event |
+| POST | `/api/admin/upload/blob-sas-url` | Admin | Generate a write-only Azure Blob SAS URL for direct browser upload |
 
 ---
 
@@ -427,6 +435,30 @@ Stripe solves this by rendering the card input inside a **cross-origin iframe** 
 4. On success, the `PaymentIntentId` is stored on the `Order` row
 5. If the database save fails after a successful charge, `RefundAsync` is called automatically (compensation pattern)
 6. The booking `Idempotency-Key` header is forwarded to Stripe as its own idempotency key, preventing double charges on retries
+
+---
+
+## Azure Blob Storage
+
+Event images are uploaded **directly from the browser to Azure Blob Storage** — the file never passes through the API server. This keeps the API stateless and avoids unnecessary bandwidth and memory pressure for large files.
+
+### How it works
+
+1. When an admin selects an image file in the event form, the frontend calls `POST /api/admin/upload/blob-sas-url` with `{ fileName, contentType }`
+2. `BlobService.GenerateUploadSasUrlAsync` creates a **write-only SAS token** (5-minute TTL, `Write + Create` permissions only — no Read or List) scoped to a single blob. The blob name is prefixed with a GUID to prevent concurrent-upload collisions
+3. The API returns `{ uploadUrl, publicUrl }`. The `uploadUrl` is the SAS-signed Azure endpoint; the `publicUrl` is the permanent read URL to store on the event record
+4. The frontend PUTs the file bytes directly to `uploadUrl` with the `x-ms-blob-type: BlockBlob` header — Azure accepts this without the request touching our API
+5. On success the frontend stores `publicUrl` in the event form and submits the event as usual
+
+### Why bypass the API
+
+- The API stays stateless — no multipart parsing, no temp files, no streaming memory
+- The SAS token is **write-only** and expires in 5 minutes, so a leaked URL cannot be used to read or enumerate other blobs
+- Config (`AzureBlob:ConnectionString`, `AzureBlob:ContainerName`) is managed via `dotnet user-secrets` locally and environment variables in CI/production — nothing is committed to `appsettings.json`
+
+### In tests
+
+`IBlobService` is replaced with `FakeBlobService` in integration tests, so tests run without an Azure storage account. `BlobServiceTests` covers the missing-configuration guard (`InvalidOperationException` when connection string or container name is absent).
 
 ---
 
